@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: and
+          POSTGRES_PASSWORD: and
+          POSTGRES_DB: cadastro_teste
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: jdbc:postgresql://localhost:5432/cadastro_teste
+      DATABASE_USUARIO: and
+      DATABASE_SENHA: and
+      APP_JWT_SEGREDO: segredo-apenas-de-teste-com-mais-de-trinta-e-dois-bytes-aqui
+      APP_CORS_ORIGENS: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Compilar e testar
+        run: mvn -B verify
