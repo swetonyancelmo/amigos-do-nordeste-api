@@ -1,0 +1,18 @@
+# Banco local de desenvolvimento. Em produção usamos Neon.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cadastro-familias-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: and
+      POSTGRES_PASSWORD: and
+      POSTGRES_DB: cadastro
+    ports: ["5432:5432"]
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U and -d cadastro"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: cadastro-familias-api
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/cadastro}
+    username: ${DATABASE_USUARIO:and}
+    password: ${DATABASE_SENHA:and}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # SEMPRE none. Schema muda por migração do Flyway, versionada no git —
+      # é o que permite duas equipes evoluírem o banco sem derrubar o trabalho
+      # da outra. Ver CONTRIBUTING.md.
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: America/Recife
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: ${PORT:3333}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+app:
+  jwt:
+    # Gere um por ambiente:  openssl rand -base64 48
+    segredo: ${APP_JWT_SEGREDO:troque-isto-por-um-valor-aleatorio-de-no-minimo-32-bytes}
+    validade-acesso: 15m
+    validade-renovacao: 7d
+  cors:
+    origens: ${APP_CORS_ORIGENS:http://localhost:3000}
+  # Em produção precisa ser true (o cookie só viaja em HTTPS).
+  cookie-seguro: ${APP_COOKIE_SEGURO:false}
+  usuario-inicial:
+    email: ${APP_USUARIO_INICIAL_EMAIL:}
+    nome: ${APP_USUARIO_INICIAL_NOME:Associação Amigos do Nordeste}
+
+logging:
+  level:
+    br.org.amigosdonordeste: INFO
