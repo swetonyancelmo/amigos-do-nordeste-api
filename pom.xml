@@ -21,6 +21,9 @@
     <java.version>21</java.version>
     <jjwt.version>0.12.6</jjwt.version>
     <springdoc.version>2.7.0</springdoc.version>
+    <!-- Sobe a versao que o Spring Boot 3.4 fixa (1.18.36): aquela quebra em JDK
+         mais novo com "TypeTag :: UNKNOWN". Esta cobre JDK 21 ate 25. -->
+    <lombok.version>1.18.46</lombok.version>
   </properties>
 
   <dependencies>
@@ -39,6 +42,12 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
     </dependency>
 
     <!-- Migracoes versionadas. O equivalente do que ja fazíamos com TypeORM:
