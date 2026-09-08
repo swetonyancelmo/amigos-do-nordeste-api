@@ -1,4 +1,5 @@
 package br.org.amigosdonordeste.cadastro.pessoa.enuns;
+import br.org.amigosdonordeste.cadastro.dominio.Rotulavel;
 
 /**
  * Tamanho de roupa do membro. Alimenta a contagem de roupa por comunidade
@@ -7,23 +8,11 @@ package br.org.amigosdonordeste.cadastro.pessoa.enuns;
  * Lista fechada, valores provisorios — a associacao usa faixas propria nos
  * documentos atuais; confirmar e servir por /api/metadados.
  */
-public enum TamanhoRoupa {
-    RN,
-    BEBE_P,
-    BEBE_M,
-    BEBE_G,
-    INFANTIL_2,
-    INFANTIL_4,
-    INFANTIL_6,
-    INFANTIL_8,
-    INFANTIL_10,
-    INFANTIL_12,
-    INFANTIL_14,
-    ADULTO_PP,
-    ADULTO_P,
-    ADULTO_M,
-    ADULTO_G,
-    ADULTO_GG,
-    ADULTO_XG,
-    ADULTO_XGG
+public enum TamanhoRoupa implements Rotulavel {
+
+    PP("PP"), P("P"), M("M"), G("G"), GG("GG");
+
+    private final String rotulo;
+    TamanhoRoupa(String rotulo) { this.rotulo = rotulo; }
+    public String getRotulo() { return rotulo; }
 }

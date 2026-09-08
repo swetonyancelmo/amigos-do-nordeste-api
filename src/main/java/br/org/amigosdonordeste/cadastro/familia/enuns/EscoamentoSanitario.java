@@ -6,10 +6,22 @@ package br.org.amigosdonordeste.cadastro.familia.enuns;
  * Valores provisorios, a servir por /api/metadados.
  */
 public enum EscoamentoSanitario {
-    REDE_COLETORA,
-    FOSSA_SEPTICA,
-    FOSSA_RUDIMENTAR,
-    VALA_A_CEU_ABERTO,
-    DIRETO_PARA_CORPO_DAGUA,
-    OUTRO
+
+    FOSSA_RUDIMENTAR(124, "Fossa rudimentar"),
+    FOSSA_SEPTICA(123, "Fossa séptica"),
+    REDE_COLETORA(122, "Rede coletora de esgoto ou pluvial"),
+    CEU_ABERTO(126, "Céu aberto"),
+    DIRETO_RIO_LAGO_MAR(125, "Direto para um rio, lago ou mar"),
+    OUTRA_FORMA(127, "Outra forma");
+
+    private final int codigoESus;
+    private final String rotulo;
+
+    EscoamentoSanitario(int codigoESus, String rotulo) {
+        this.codigoESus = codigoESus;
+        this.rotulo = rotulo;
+    }
+
+    public int getCodigoESus() { return codigoESus; }
+    public String getRotulo()  { return rotulo; }
 }

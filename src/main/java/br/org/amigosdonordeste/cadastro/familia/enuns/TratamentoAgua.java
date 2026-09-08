@@ -6,9 +6,23 @@ package br.org.amigosdonordeste.cadastro.familia.enuns;
  * provisorios, a servir por /api/metadados.
  */
 public enum TratamentoAgua {
-    FILTRACAO,
-    FERVURA,
-    CLORACAO,
-    SEM_TRATAMENTO,
-    OUTRO
+
+    SEM_TRATAMENTO(100, "Sem tratamento"),
+    FILTRADA_FILTRO_BARRO(218, "Filtrada com filtro de barro"),
+    FILTRADA_OUTRO_FILTRO(219, "Filtrada por outro tipo de filtro"),
+    CLORADA(99, "Clorada"),
+    CLORADA_HIPOCLORITO(220, "Clorada com hipoclorito de sódio"),
+    FERVIDA(98, "Fervida"),
+    MINERAL(152, "Mineral");
+
+    private final int codigoESus;
+    private final String rotulo;
+
+    TratamentoAgua(int codigoESus, String rotulo) {
+        this.codigoESus = codigoESus;
+        this.rotulo = rotulo;
+    }
+
+    public int getCodigoESus() { return codigoESus; }
+    public String getRotulo()  { return rotulo; }
 }
