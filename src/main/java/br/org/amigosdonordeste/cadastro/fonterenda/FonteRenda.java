@@ -30,6 +30,13 @@ public class FonteRenda {
     @JoinColumn(name = "familia_id", nullable = false)
     private Familia familia;
 
+    // Setter escrito na mao: o do Lombok nao fica visivel para Familia.java
+    // nesta combinacao de Maven + JDK (o unico lugar do projeto que chama um
+    // setter Lombok de outra classe).
+    public void setFamilia(Familia familia) {
+        this.familia = familia;
+    }
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private TipoFonteRenda tipo;

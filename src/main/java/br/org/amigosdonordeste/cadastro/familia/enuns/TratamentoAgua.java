@@ -1,11 +1,13 @@
 package br.org.amigosdonordeste.cadastro.familia.enuns;
 
+import br.org.amigosdonordeste.cadastro.dominio.Rotulavel;
+
 /**
  * Como a familia trata a agua de beber. Categorias baseadas na Ficha de
  * Cadastro Domiciliar do e-SUS (ver docs/decisoes/ADR-0003). Valores
  * provisorios, a servir por /api/metadados.
  */
-public enum TratamentoAgua {
+public enum TratamentoAgua implements Rotulavel {
 
     SEM_TRATAMENTO(100, "Sem tratamento"),
     FILTRADA_FILTRO_BARRO(218, "Filtrada com filtro de barro"),

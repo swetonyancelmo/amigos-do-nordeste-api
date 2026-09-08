@@ -12,6 +12,8 @@ public enum TipoFonteRenda implements Rotulavel {
     BPC("BPC",                         false),
     TRABALHO_SAZONAL("Trabalho sazonal", false),
     TRABALHO_FIXO("Trabalho fixo",     false),
+    TRABALHO_INFORMAL("Trabalho informal", false),
+    AUXILIO_DOENCA("Auxílio-doença",   false),
     PENSAO("Pensão",                   false),
     NENHUMA("Nenhuma",                 true),
     OUTRA("Outra",                     true);

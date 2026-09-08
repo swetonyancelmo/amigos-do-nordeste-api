@@ -31,6 +31,10 @@ public class Pessoa {
     @JoinColumn(name = "familia_id", nullable = false)
     private Familia familia;
 
+    public void setFamilia(Familia familia) {
+        this.familia = familia;
+    }
+
     @Column(length = 120)
     private String nome;
 

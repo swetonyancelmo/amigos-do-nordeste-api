@@ -11,8 +11,12 @@ public enum TipoComunidade implements Rotulavel {
 
     SITIO("Sítio"),
     ASSENTAMENTO("Assentamento"),
+    POVOADO("Povoado"),
+    COMUNIDADE_QUILOMBOLA("Comunidade quilombola"),
+    VILA("Vila"),
     DISTRITO("Distrito"),
-    BAIRRO("Bairro");
+    BAIRRO("Bairro"),
+    OUTRO("Outro");
 
     private final String rotulo;
     TipoComunidade(String rotulo) { this.rotulo = rotulo; }
