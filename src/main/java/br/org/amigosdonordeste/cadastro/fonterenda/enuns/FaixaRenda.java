@@ -1,5 +1,5 @@
 package br.org.amigosdonordeste.cadastro.fonterenda.enuns;
-
+import br.org.amigosdonordeste.cadastro.dominio.Rotulavel;
 /**
  * Faixa de renda em salarios minimos, NUNCA valor em reais: renda declarada por
  * um vizinho, no papel, sobre trabalho sazonal, e o dado menos confiavel do
@@ -7,10 +7,14 @@ package br.org.amigosdonordeste.cadastro.fonterenda.enuns;
  *
  * Lista fechada, valores provisorios — a servir por /api/metadados.
  */
-public enum FaixaRenda {
-    SEM_RENDA,
-    ATE_MEIO_SM,
-    DE_MEIO_A_UM_SM,
-    DE_UM_A_DOIS_SM,
-    ACIMA_DE_DOIS_SM
+public enum FaixaRenda implements Rotulavel {
+
+    SEM_RENDA_FIXA("Sem renda fixa"),
+    ATE_1_SALARIO("Até 1 salário mínimo"),
+    DE_1_A_2_SALARIOS("De 1 a 2 salários mínimos"),
+    MAIS_DE_2_SALARIOS("Mais de 2 salários mínimos");
+
+    private final String rotulo;
+    FaixaRenda(String rotulo) { this.rotulo = rotulo; }
+    public String getRotulo() { return rotulo; }
 }
