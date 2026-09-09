@@ -1,6 +1,6 @@
 package br.org.amigosdonordeste.cadastro.comunidade;
 
-import br.org.amigosdonordeste.cadastro.comunidade.enuns.TipoComunidade;
+import br.org.amigosdonordeste.cadastro.comunidade.enums.TipoComunidade;
 import br.org.amigosdonordeste.cadastro.municipio.Municipio;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

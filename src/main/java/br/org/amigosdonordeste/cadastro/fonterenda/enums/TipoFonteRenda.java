@@ -1,4 +1,4 @@
-package br.org.amigosdonordeste.cadastro.fonterenda.enuns;
+package br.org.amigosdonordeste.cadastro.fonterenda.enums;
 import br.org.amigosdonordeste.cadastro.dominio.Rotulavel;
 /**
  * Tipo da fonte de renda. Lista fechada; a associacao citou bolsa familia,

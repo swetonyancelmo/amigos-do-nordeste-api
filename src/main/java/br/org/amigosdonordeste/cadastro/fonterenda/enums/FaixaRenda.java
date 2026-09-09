@@ -1,4 +1,4 @@
-package br.org.amigosdonordeste.cadastro.fonterenda.enuns;
+package br.org.amigosdonordeste.cadastro.fonterenda.enums;
 import br.org.amigosdonordeste.cadastro.dominio.Rotulavel;
 /**
  * Faixa de renda em salarios minimos, NUNCA valor em reais: renda declarada por

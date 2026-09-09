@@ -1,8 +1,8 @@
 package br.org.amigosdonordeste.cadastro.fonterenda;
 
 import br.org.amigosdonordeste.cadastro.familia.Familia;
-import br.org.amigosdonordeste.cadastro.fonterenda.enuns.FaixaRenda;
-import br.org.amigosdonordeste.cadastro.fonterenda.enuns.TipoFonteRenda;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

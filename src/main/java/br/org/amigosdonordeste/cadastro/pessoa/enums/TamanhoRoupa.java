@@ -1,4 +1,4 @@
-package br.org.amigosdonordeste.cadastro.pessoa.enuns;
+package br.org.amigosdonordeste.cadastro.pessoa.enums;
 import br.org.amigosdonordeste.cadastro.dominio.Rotulavel;
 
 /**

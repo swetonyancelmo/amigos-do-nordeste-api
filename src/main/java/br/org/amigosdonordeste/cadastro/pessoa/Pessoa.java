@@ -1,9 +1,9 @@
 package br.org.amigosdonordeste.cadastro.pessoa;
 
 import br.org.amigosdonordeste.cadastro.familia.Familia;
-import br.org.amigosdonordeste.cadastro.pessoa.enuns.Parentesco;
-import br.org.amigosdonordeste.cadastro.pessoa.enuns.Sexo;
-import br.org.amigosdonordeste.cadastro.pessoa.enuns.TamanhoRoupa;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.Parentesco;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
