@@ -69,7 +69,7 @@ public class Pessoa {
     private TamanhoRoupa tamanhoRoupa;
 
     @Column(name = "numero_calcado")
-    private Integer numeroCalcado;
+    private String numeroCalcado;
 
     private Boolean gestante;
 
