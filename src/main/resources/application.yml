@@ -1,8 +1,6 @@
 spring:
   application:
     name: cadastro-familias-api
-  profiles:
-    active: test
 
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/cadastro}

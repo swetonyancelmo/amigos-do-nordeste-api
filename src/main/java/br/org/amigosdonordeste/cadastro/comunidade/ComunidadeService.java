@@ -27,12 +27,16 @@ public class ComunidadeService {
 
   private Municipio buscarMunicipio(UUID municipioId) {
     return municipioRepositorio.findById(municipioId)
-      .orElseThrow(() -> new IllegalArgumentException("Município não encontrado: " + municipioId));
+      .orElseThrow(() -> new MunicipioNaoEncontradoException(municipioId));
   }
 
   @Transactional(readOnly = true)
   public List<ComunidadeResponse> listar(UUID municipioId){
-    return comunidadeRepositorio.findByMunicipioIdOrderByNomeAsc(municipioId).stream()
+    List<Comunidade> comunidades = municipioId != null
+      ? comunidadeRepositorio.findByMunicipioIdOrderByNomeAsc(municipioId)
+      : comunidadeRepositorio.listarComMunicipio();
+
+    return comunidades.stream()
       .map(ComunidadeResponse::fromEntity)
       .toList();
   }
@@ -44,8 +48,7 @@ public class ComunidadeService {
   }
 
   public ComunidadeResponse criar(ComunidadeCreateRequest request) {
-    Municipio municipio = municipioRepositorio.findById(request.municipioId())
-      .orElseThrow(() -> new MunicipioNaoEncontradoException(request.municipioId()));
+    Municipio municipio = buscarMunicipio(request.municipioId());
 
     Comunidade comunidade = Comunidade.builder()
       .nome(request.nome())
@@ -55,7 +58,7 @@ public class ComunidadeService {
       .liderTelefone(request.liderTelefone())
       .latitude(request.latitude())
       .longitude(request.longitude())
-      .observacoes(request.Observacoes())
+      .observacoes(request.observacoes())
       .build();
 
     return ComunidadeResponse.fromEntity(comunidadeRepositorio.save(comunidade));

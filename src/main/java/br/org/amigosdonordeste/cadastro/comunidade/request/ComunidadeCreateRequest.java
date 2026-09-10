@@ -27,6 +27,6 @@ public record ComunidadeCreateRequest(
   BigDecimal latitude,
   BigDecimal longitude,
 
-  String Observacoes
+  String observacoes
 ) {
 }
