@@ -3,7 +3,13 @@ package br.org.amigosdonordeste.cadastro.auth;
 import br.org.amigosdonordeste.cadastro.auth.dto.LoginRequisicao;
 import br.org.amigosdonordeste.cadastro.auth.dto.LoginResposta;
 import br.org.amigosdonordeste.cadastro.auth.dto.TrocarSenhaRequisicao;
+import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -41,7 +47,16 @@ public class AuthController {
         this.cookieSeguro = cookieSeguro;
     }
 
-    @Operation(summary = "Entrar no sistema")
+    @Operation(summary = "Entrar no sistema",
+        description = "Autentica o usuário com e-mail e senha. Em caso de sucesso, define o cookie "
+            + "httpOnly 'and_refresh' com o refresh token e retorna o access token no corpo.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Login realizado com sucesso"),
+        @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class))),
+        @ApiResponse(responseCode = "401", description = "Credenciais inválidas",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class)))
+    })
     @PostMapping("/login")
     public LoginResposta entrar(@Valid @RequestBody LoginRequisicao requisicao,
                                 HttpServletResponse resposta) {
@@ -56,6 +71,13 @@ public class AuthController {
             tokens.acesso());
     }
 
+    @Operation(summary = "Renovar token de acesso",
+        description = "Gera um novo access token a partir do refresh token enviado no cookie httpOnly 'and_refresh'.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Token renovado com sucesso"),
+        @ApiResponse(responseCode = "401", description = "Refresh token ausente, inválido ou expirado",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class)))
+    })
     @PostMapping("/renovar")
     public Map<String, String> renovar(
         @CookieValue(name = COOKIE_RENOVACAO, required = false) String tokenRenovacao,
@@ -65,6 +87,9 @@ public class AuthController {
         return Map.of("accessToken", tokens.acesso());
     }
 
+    @Operation(summary = "Sair do sistema",
+        description = "Limpa o cookie de refresh token (and_refresh). Operação idempotente mesmo sem sessão ativa.")
+    @ApiResponse(responseCode = "200", description = "Logout realizado com sucesso")
     @PostMapping("/sair")
     public ResponseEntity<Map<String, Boolean>> sair() {
         ResponseCookie limpo = ResponseCookie.from(COOKIE_RENOVACAO, "")
@@ -74,6 +99,16 @@ public class AuthController {
             .body(Map.of("ok", true));
     }
 
+    @Operation(summary = "Trocar senha do usuário autenticado",
+        description = "Requer token Bearer válido. Valida a senha atual antes de aplicar a nova senha.")
+    @SecurityRequirement(name = "bearer")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Senha alterada com sucesso"),
+        @ApiResponse(responseCode = "400", description = "Senha atual incorreta ou dados inválidos",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class))),
+        @ApiResponse(responseCode = "401", description = "Não autenticado",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class)))
+    })
     @PostMapping("/trocar-senha")
     public Map<String, Boolean> trocarSenha(@AuthenticationPrincipal String usuarioId,
                                             @Valid @RequestBody TrocarSenhaRequisicao requisicao) {
