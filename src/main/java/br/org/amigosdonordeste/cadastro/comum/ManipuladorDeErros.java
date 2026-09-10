@@ -2,6 +2,7 @@ package br.org.amigosdonordeste.cadastro.comum;
 
 import br.org.amigosdonordeste.cadastro.auth.CredenciaisInvalidasException;
 import br.org.amigosdonordeste.cadastro.auth.SenhaAtualIncorretaException;
+import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
 import br.org.amigosdonordeste.cadastro.usuario.EmailJaCadastradoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,8 +11,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.OffsetDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * Toda resposta de erro sai no mesmo formato, com a chave `message`, porque e o
@@ -22,22 +21,22 @@ import java.util.Map;
 public class ManipuladorDeErros {
 
     @ExceptionHandler(CredenciaisInvalidasException.class)
-    public ResponseEntity<Map<String, Object>> credenciais(CredenciaisInvalidasException e) {
+    public ResponseEntity<ErroResposta> credenciais(CredenciaisInvalidasException e) {
         return resposta(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
     @ExceptionHandler(SenhaAtualIncorretaException.class)
-    public ResponseEntity<Map<String, Object>> senha(SenhaAtualIncorretaException e) {
+    public ResponseEntity<ErroResposta> senha(SenhaAtualIncorretaException e) {
         return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     @ExceptionHandler(EmailJaCadastradoException.class)
-    public ResponseEntity<Map<String, Object>> emailDuplicado(EmailJaCadastradoException e) {
+    public ResponseEntity<ErroResposta> emailDuplicado(EmailJaCadastradoException e) {
         return resposta(HttpStatus.CONFLICT, e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> validacao(MethodArgumentNotValidException e) {
+    public ResponseEntity<ErroResposta> validacao(MethodArgumentNotValidException e) {
         String mensagem = e.getBindingResult().getFieldErrors().stream()
             .map(erro -> erro.getField() + ": " + erro.getDefaultMessage())
             .findFirst()
@@ -45,11 +44,8 @@ public class ManipuladorDeErros {
         return resposta(HttpStatus.BAD_REQUEST, mensagem);
     }
 
-    private ResponseEntity<Map<String, Object>> resposta(HttpStatus status, String mensagem) {
-        Map<String, Object> corpo = new LinkedHashMap<>();
-        corpo.put("em", OffsetDateTime.now().toString());
-        corpo.put("status", status.value());
-        corpo.put("message", mensagem);
+    private ResponseEntity<ErroResposta> resposta(HttpStatus status, String mensagem) {
+        ErroResposta corpo = new ErroResposta(OffsetDateTime.now().toString(), status.value(), mensagem);
         return ResponseEntity.status(status).body(corpo);
     }
 }
