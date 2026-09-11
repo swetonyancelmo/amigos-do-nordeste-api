@@ -2,6 +2,7 @@ package br.org.amigosdonordeste.cadastro.comum;
 
 import br.org.amigosdonordeste.cadastro.auth.CredenciaisInvalidasException;
 import br.org.amigosdonordeste.cadastro.auth.SenhaAtualIncorretaException;
+import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
 import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
 import br.org.amigosdonordeste.cadastro.municipio.MunicipioNaoEncontradoException;
 import br.org.amigosdonordeste.cadastro.usuario.EmailJaCadastradoException;
@@ -37,12 +38,12 @@ public class ManipuladorDeErros {
     }
 
     @ExceptionHandler(ComunidadeNaoEncontradaException.class)
-    public ResponseEntity<Map<String, Object>> comunidadeNaoEncontrada(ComunidadeNaoEncontradaException e) {
+    public ResponseEntity<ErroResposta> comunidadeNaoEncontrada(ComunidadeNaoEncontradaException e) {
         return resposta(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
     @ExceptionHandler(MunicipioNaoEncontradoException.class)
-    public ResponseEntity<Map<String, Object>> municipioNaoEncontrado(MunicipioNaoEncontradoException e) {
+    public ResponseEntity<ErroResposta> municipioNaoEncontrado(MunicipioNaoEncontradoException e) {
         return resposta(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
