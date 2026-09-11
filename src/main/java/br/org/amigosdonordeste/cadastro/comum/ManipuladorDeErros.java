@@ -3,6 +3,8 @@ package br.org.amigosdonordeste.cadastro.comum;
 import br.org.amigosdonordeste.cadastro.auth.CredenciaisInvalidasException;
 import br.org.amigosdonordeste.cadastro.auth.SenhaAtualIncorretaException;
 import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
+import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.municipio.MunicipioNaoEncontradoException;
 import br.org.amigosdonordeste.cadastro.usuario.EmailJaCadastradoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +35,16 @@ public class ManipuladorDeErros {
     @ExceptionHandler(EmailJaCadastradoException.class)
     public ResponseEntity<ErroResposta> emailDuplicado(EmailJaCadastradoException e) {
         return resposta(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    @ExceptionHandler(ComunidadeNaoEncontradaException.class)
+    public ResponseEntity<ErroResposta> comunidadeNaoEncontrada(ComunidadeNaoEncontradaException e) {
+        return resposta(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(MunicipioNaoEncontradoException.class)
+    public ResponseEntity<ErroResposta> municipioNaoEncontrado(MunicipioNaoEncontradoException e) {
+        return resposta(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
