@@ -1,10 +1,13 @@
 package br.org.amigosdonordeste.cadastro.config;
 
+import br.org.amigosdonordeste.cadastro.agente.FiltroTokenAgente;
 import br.org.amigosdonordeste.cadastro.auth.FiltroJwt;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -20,15 +23,32 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Dois tipos de credencial, dois papeis:
+ *  - JWT da usuaria do painel  -> ROLE_ADMIN (FiltroJwt)
+ *  - token do aparelho da agente -> ROLE_AGENTE (FiltroTokenAgente)
+ *
+ * Toda rota nova nasce ADMIN. A agente so entra onde estiver listada aqui
+ * explicitamente — hoje, a rota de envio de pre-cadastro. Um token de aparelho
+ * que vazasse nao abre a base.
+ *
+ * O controller dessa rota pode (e deve) repetir a regra com
+ * {@code @PreAuthorize("hasRole('AGENTE')")}: @EnableMethodSecurity esta ligado.
+ */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SegurancaConfig {
 
     private final FiltroJwt filtroJwt;
+    private final FiltroTokenAgente filtroTokenAgente;
     private final String origensPermitidas;
 
-    public SegurancaConfig(FiltroJwt filtroJwt, @Value("${app.cors.origens}") String origensPermitidas) {
+    public SegurancaConfig(FiltroJwt filtroJwt,
+                           FiltroTokenAgente filtroTokenAgente,
+                           @Value("${app.cors.origens}") String origensPermitidas) {
         this.filtroJwt = filtroJwt;
+        this.filtroTokenAgente = filtroTokenAgente;
         this.origensPermitidas = origensPermitidas;
     }
 
@@ -52,7 +72,7 @@ public class SegurancaConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(rotas -> rotas
                 // Trancado por padrao, aberto por excecao — nunca o contrario.
-                // Toda rota nova ja nasce protegida sem voce fazer nada.
+                // Toda rota nova ja nasce ADMIN sem voce fazer nada.
                 .requestMatchers(
                     "/api/auth/login",
                     "/api/auth/renovar",
@@ -62,10 +82,14 @@ public class SegurancaConfig {
                     "/api/metadados",
                     "/swagger-ui/**",
                     "/swagger-ui.html").permitAll()
-                .anyRequest().authenticated())
+                // A unica porta do aparelho da agente. So AGENTE: o administrador
+                // nao envia pre-cadastro, ele aprova.
+                .requestMatchers(HttpMethod.POST, "/api/pre-cadastros").hasRole("AGENTE")
+                .anyRequest().hasRole("ADMIN"))
             .exceptionHandling(e -> e.authenticationEntryPoint(
                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-            .addFilterBefore(filtroJwt, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(filtroJwt, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(filtroTokenAgente, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

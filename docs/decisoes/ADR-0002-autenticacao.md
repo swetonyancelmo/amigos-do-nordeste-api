@@ -27,13 +27,31 @@ estrutura atual aceita perfis depois sem reescrita: basta uma coluna de papel na
 tabela `usuario` e regras de autorização nas rotas. Nada do que está construído
 precisaria ser jogado fora.
 
+## Papéis (12/09/2026)
+
+O pré-cadastro trouxe um segundo tipo de acesso: o **aparelho da agente de
+campo**, que envia famílias para a associação revisar. Isso não responde a
+Q-01 — a agente não é usuária do painel, não tem e-mail nem senha — mas
+exigiu a coluna de papel que esta ADR já previa (migração `V10`).
+
+| Credencial | Quem | Papel | O que abre |
+|---|---|---|---|
+| JWT de acesso (login) | usuária do painel | `ADMIN` | tudo, menos enviar pré-cadastro |
+| Token de aparelho (`Bearer agente_…`) | agente de campo | `AGENTE` | **só** `POST /api/pre-cadastros` |
+
+O token do aparelho é opaco (32 bytes aleatórios), nasce da troca de um código
+de convite de uso único e só o **SHA-256** dele fica no banco — sem sal, de
+propósito, porque o filtro precisa achar a agente pelo hash e o token já tem
+entropia suficiente. Um token de aparelho que vazar não lista família, não vê
+relatório e não abre o painel: `anyRequest().hasRole("ADMIN")`.
+
 ## Decisão
 
 Autenticação implementada na própria API, com Postgres (Neon) como banco.
 
 Com uma usuária só, a superfície de auth é minúscula: entrar, renovar, sair,
-trocar senha. Não há fluxo de inscrição, verificação de e-mail, login social nem
-papéis. É o tamanho certo para a equipe de backend construir **corretamente** e
+trocar senha. Não há fluxo de inscrição, verificação de e-mail nem login social;
+os papéis são os dois da tabela acima. É o tamanho certo para a equipe de backend construir **corretamente** e
 de fato aprender — e tira um fornecedor do diagrama.
 
 ### Não existe rota de cadastro
@@ -49,7 +67,7 @@ nasce de `pnpm usuario:criar`, rodado uma vez na instalação.
 | Hash **argon2id** | Senha nunca em texto. Hash rápido (MD5/SHA) é exatamente o que não se quer. |
 | Access token de 15 min, **em memória** no frontend | Token parado em `localStorage` é o que um XSS leva embora. |
 | Refresh em cookie `httpOnly` + `Secure` + `SameSite=Lax` | O JavaScript da página não consegue ler. |
-| `SecurityFilterChain` com `anyRequest().authenticated()` e lista curta de rotas públicas | Trancado por padrão, aberto por exceção — nunca o contrário. |
+| `SecurityFilterChain` com `anyRequest().hasRole("ADMIN")` e lista curta de rotas públicas | Trancado por padrão, aberto por exceção — nunca o contrário. Rota de agente entra na lista explicitamente. |
 | Rate limit de 5/min no login | Com uma usuária, força bruta é o único vetor real. |
 | Mesma mensagem para e-mail errado e senha errada | Dizer qual dos dois falhou entrega metade da resposta. |
 | Bean Validation com `@Valid` em todo corpo de requisição | Campo que não está no DTO não entra no banco. |

@@ -64,6 +64,7 @@ public class CriarUsuarioRunner implements ApplicationRunner {
         usuario.setEmail(emailInicial.toLowerCase().trim());
         usuario.setNome(nomeInicial);
         usuario.setSenhaHash(codificador.encode(senha));
+        usuario.setPapel(Papel.ADMIN);
         usuario.setAtivo(true);
         usuarios.save(usuario);
 
