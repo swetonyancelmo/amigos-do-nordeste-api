@@ -49,7 +49,7 @@ public class AuthService {
         usuarios.save(usuario);
 
         return new Tokens(
-            jwt.gerarAcesso(usuario.getId(), usuario.getEmail()),
+            jwt.gerarAcesso(usuario.getId(), usuario.getEmail(), usuario.getPapel()),
             jwt.gerarRenovacao(usuario.getId(), usuario.getEmail()),
             usuario);
     }
@@ -76,7 +76,7 @@ public class AuthService {
             .orElseThrow(CredenciaisInvalidasException::new);
 
         return new Tokens(
-            jwt.gerarAcesso(usuario.getId(), usuario.getEmail()),
+            jwt.gerarAcesso(usuario.getId(), usuario.getEmail(), usuario.getPapel()),
             jwt.gerarRenovacao(usuario.getId(), usuario.getEmail()),
             usuario);
     }

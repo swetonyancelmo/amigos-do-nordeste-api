@@ -1,13 +1,10 @@
-package br.org.amigosdonordeste.cadastro.auth;
+package br.org.amigosdonordeste.cadastro.agente;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
-import br.org.amigosdonordeste.cadastro.agente.TokenAgenteService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,23 +16,25 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Le o JWT do cabecalho Authorization e coloca a usuaria no contexto, com a
- * authority ROLE_&lt;papel&gt; que veio dentro do token.
+ * Le o token do aparelho (Authorization: Bearer agente_...) e coloca a agente
+ * no contexto com ROLE_AGENTE — e so isso.
  *
- * Um token de renovacao NAO abre rota protegida — ele so serve para renovar.
- * Por isso o tipo e conferido aqui. Um token de acesso sem papel (emitido
- * antes da V10) tambem nao abre nada: a pessoa entra de novo e recebe um novo.
+ * O que essa authority abre esta em SegurancaConfig: a rota de envio de
+ * pre-cadastro. Todo o resto exige ROLE_ADMIN, entao um token de aparelho que
+ * vazasse nao lista familia, nao ve relatorio e nao abre o painel.
  *
- * Token de aparelho (prefixo agente_) nao e JWT — quem cuida dele e o
- * FiltroTokenAgente.
+ * O principal e o id do agente (string), no mesmo formato que o FiltroJwt usa
+ * para o usuario: nos controllers, {@code @AuthenticationPrincipal String agenteId}.
  */
 @Component
-public class FiltroJwt extends OncePerRequestFilter {
+public class FiltroTokenAgente extends OncePerRequestFilter {
 
-    private final JwtService jwt;
+    public static final String PAPEL = "AGENTE";
 
-    public FiltroJwt(JwtService jwt) {
-        this.jwt = jwt;
+    private final AgenteRepositorio agentes;
+
+    public FiltroTokenAgente(AgenteRepositorio agentes) {
+        this.agentes = agentes;
     }
 
     @Override
@@ -47,24 +46,20 @@ public class FiltroJwt extends OncePerRequestFilter {
         String cabecalho = requisicao.getHeader("Authorization");
 
         if (cabecalho != null && cabecalho.startsWith("Bearer ")
-            && !TokenAgenteService.eTokenDeAgente(cabecalho.substring(7))
+            && TokenAgenteService.eTokenDeAgente(cabecalho.substring(7))
             && SecurityContextHolder.getContext().getAuthentication() == null) {
-            try {
-                Claims claims = jwt.ler(cabecalho.substring(7));
-                String papel = claims.get("papel", String.class);
-                if (JwtService.TIPO_ACESSO.equals(claims.get("tipo", String.class)) && papel != null) {
+
+            // Token desconhecido ou agente desativado: segue sem autenticar e a
+            // requisicao termina em 401 no ponto certo.
+            agentes.findByTokenHashAndAtivoTrue(TokenAgenteService.hash(cabecalho.substring(7)))
+                .ifPresent(agente -> {
                     var autenticacao = new UsernamePasswordAuthenticationToken(
-                        claims.getSubject(), null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + papel)));
+                        agente.getId().toString(), null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + PAPEL)));
                     autenticacao.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(requisicao));
                     SecurityContextHolder.getContext().setAuthentication(autenticacao);
-                }
-            } catch (JwtException e) {
-                // Token invalido ou expirado: segue sem autenticacao, e a
-                // requisicao termina em 401 no ponto certo.
-                SecurityContextHolder.clearContext();
-            }
+                });
         }
 
         cadeia.doFilter(requisicao, resposta);

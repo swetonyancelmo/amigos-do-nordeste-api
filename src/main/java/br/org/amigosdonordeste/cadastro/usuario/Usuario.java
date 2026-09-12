@@ -7,10 +7,12 @@ import java.util.UUID;
 /**
  * A associacao decidiu na reuniao: uma pessoa cadastra, uma pessoa tem acesso.
  *
- * Por isso esta tabela nao tem perfil, papel nem permissao — nao existe segundo
- * tipo de usuario para diferenciar. E por isso nao existe rota publica de
- * cadastro: a conta nasce do comando de criacao de usuario, rodado uma vez na
- * instalacao. Ver docs/decisoes/ADR-0002.
+ * Por isso nao existe rota publica de cadastro: a conta nasce do comando de
+ * criacao de usuario, rodado uma vez na instalacao. Ver docs/decisoes/ADR-0002.
+ *
+ * A coluna `papel` (V10) existe porque o pre-cadastro trouxe um segundo tipo de
+ * acesso — o aparelho da agente, autenticado por token. Todo usuario desta
+ * tabela e ADMIN; a agente nao e usuario. Ver Papel e o pacote agente.
  *
  * ATENCAO: a resposta do formulario de elicitacao diz "mais de 100" pessoas
  * colaboram com a associacao. Isso ainda precisa ser conciliado com a decisao
@@ -34,6 +36,10 @@ public class Usuario {
     @Column(name = "senha_hash", nullable = false, length = 255)
     private String senhaHash;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Papel papel = Papel.ADMIN;
+
     @Column(nullable = false)
     private boolean ativo = true;
 
@@ -54,6 +60,9 @@ public class Usuario {
 
     public String getSenhaHash() { return senhaHash; }
     public void setSenhaHash(String senhaHash) { this.senhaHash = senhaHash; }
+
+    public Papel getPapel() { return papel; }
+    public void setPapel(Papel papel) { this.papel = papel; }
 
     public boolean isAtivo() { return ativo; }
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
