@@ -1,9 +1,9 @@
 package br.org.amigosdonordeste.cadastro.pessoa;
 
 import br.org.amigosdonordeste.cadastro.familia.Familia;
-import br.org.amigosdonordeste.cadastro.pessoa.enuns.Parentesco;
-import br.org.amigosdonordeste.cadastro.pessoa.enuns.Sexo;
-import br.org.amigosdonordeste.cadastro.pessoa.enuns.TamanhoRoupa;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.Parentesco;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,6 +30,10 @@ public class Pessoa {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "familia_id", nullable = false)
     private Familia familia;
+
+    public void setFamilia(Familia familia) {
+        this.familia = familia;
+    }
 
     @Column(length = 120)
     private String nome;
@@ -65,7 +69,7 @@ public class Pessoa {
     private TamanhoRoupa tamanhoRoupa;
 
     @Column(name = "numero_calcado")
-    private Integer numeroCalcado;
+    private String numeroCalcado;
 
     private Boolean gestante;
 

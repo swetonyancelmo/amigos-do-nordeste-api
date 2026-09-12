@@ -7,8 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface MunicipioRepositorio extends JpaRepository<Municipio, UUID> {
-
-    Optional<Municipio> findByCodigoIbge(String codigoIbge);
+   Optional<Municipio> findByCodigoIbge(String codigoIbge);
 
     List<Municipio> findAllByOrderByNomeAsc();
 }

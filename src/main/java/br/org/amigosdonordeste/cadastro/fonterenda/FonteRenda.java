@@ -1,8 +1,8 @@
 package br.org.amigosdonordeste.cadastro.fonterenda;
 
 import br.org.amigosdonordeste.cadastro.familia.Familia;
-import br.org.amigosdonordeste.cadastro.fonterenda.enuns.FaixaRenda;
-import br.org.amigosdonordeste.cadastro.fonterenda.enuns.TipoFonteRenda;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -29,6 +29,13 @@ public class FonteRenda {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "familia_id", nullable = false)
     private Familia familia;
+
+    // Setter escrito na mao: o do Lombok nao fica visivel para Familia.java
+    // nesta combinacao de Maven + JDK (o unico lugar do projeto que chama um
+    // setter Lombok de outra classe).
+    public void setFamilia(Familia familia) {
+        this.familia = familia;
+    }
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

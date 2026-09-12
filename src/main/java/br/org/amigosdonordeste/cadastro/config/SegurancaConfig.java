@@ -59,6 +59,7 @@ public class SegurancaConfig {
                     "/api/auth/sair",
                     "/api/saude",
                     "/v3/api-docs/**",
+                    "/api/metadados",
                     "/swagger-ui/**",
                     "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated())

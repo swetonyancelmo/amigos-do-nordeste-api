@@ -45,7 +45,7 @@ app:
   # Em produção precisa ser true (o cookie só viaja em HTTPS).
   cookie-seguro: ${APP_COOKIE_SEGURO:false}
   usuario-inicial:
-    email: ${APP_USUARIO_INICIAL_EMAIL:}
+    email: swetony@gmail.com
     nome: ${APP_USUARIO_INICIAL_NOME:Associação Amigos do Nordeste}
 
 logging:

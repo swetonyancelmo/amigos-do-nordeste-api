@@ -1,9 +1,9 @@
 package br.org.amigosdonordeste.cadastro.familia;
 
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
-import br.org.amigosdonordeste.cadastro.familia.enuns.AbastecimentoAgua;
-import br.org.amigosdonordeste.cadastro.familia.enuns.EscoamentoSanitario;
-import br.org.amigosdonordeste.cadastro.familia.enuns.TratamentoAgua;
+import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
+import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
+import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 import jakarta.persistence.*;
