@@ -1,14 +1,15 @@
-package br.org.amigosdonordeste.cadastro.familia.dto;
+package br.org.amigosdonordeste.cadastro.familia;
 
+import br.org.amigosdonordeste.cadastro.dominio.Idade;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
-import br.org.amigosdonordeste.cadastro.pessoa.enuns.Parentesco;
-import br.org.amigosdonordeste.cadastro.pessoa.enuns.Sexo;
-import br.org.amigosdonordeste.cadastro.pessoa.enuns.TamanhoRoupa;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.Parentesco;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 
 import java.time.LocalDate;
 import java.util.UUID;
 
-public record PessoaResponseDTO(
+public record PessoaResponse(
         UUID id,
         String nome,
         boolean cadastroIncompleto,
@@ -16,16 +17,23 @@ public record PessoaResponseDTO(
         LocalDate dataNascimento,
         Integer idadeEstimada,
         LocalDate idadeEstimadaEm,
+        // calculada na hora com dominio.Idade — nunca gravada no banco
+        Integer idade,
         Parentesco parentesco,
         Boolean estuda,
         String serie,
         TamanhoRoupa tamanhoRoupa,
-        Integer numeroCalcado,
+        String numeroCalcado,
         Boolean gestante,
         String observacoes
 ) {
-    public static PessoaResponseDTO from(Pessoa pessoa) {
-        return new PessoaResponseDTO(
+    public static PessoaResponse fromEntity(Pessoa pessoa) {
+        Integer idade = Idade.calcular(
+                pessoa.getDataNascimento(),
+                pessoa.getIdadeEstimada(),
+                pessoa.getIdadeEstimadaEm());
+
+        return new PessoaResponse(
                 pessoa.getId(),
                 pessoa.getNome(),
                 pessoa.isCadastroIncompleto(),
@@ -33,6 +41,7 @@ public record PessoaResponseDTO(
                 pessoa.getDataNascimento(),
                 pessoa.getIdadeEstimada(),
                 pessoa.getIdadeEstimadaEm(),
+                idade,
                 pessoa.getParentesco(),
                 pessoa.getEstuda(),
                 pessoa.getSerie(),

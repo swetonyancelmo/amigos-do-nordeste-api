@@ -1,19 +1,5 @@
 package br.org.amigosdonordeste.cadastro.familia;
 
-import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
-import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
-import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaRequestDTO;
-import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaResponseDTO;
-import br.org.amigosdonordeste.cadastro.familia.dto.FonteRendaRequestDTO;
-import br.org.amigosdonordeste.cadastro.familia.dto.PessoaRequestDTO;
-import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
-import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
-import jakarta.persistence.EntityNotFoundException;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,7 +7,25 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
+import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
+import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.dominio.NumerosCalcado;
+import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
+import br.org.amigosdonordeste.cadastro.familia.exception.NumeroCalcadoInvalidoException;
+import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
+import br.org.amigosdonordeste.cadastro.familia.request.FamiliaRequest;
+import br.org.amigosdonordeste.cadastro.familia.request.FonteRendaRequest;
+import br.org.amigosdonordeste.cadastro.familia.request.PessoaRequest;
+import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
+import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
+
 @Service
+@Transactional
 public class FamiliaService {
 
     private final FamiliaRepositorio familiaRepositorio;
@@ -32,53 +36,36 @@ public class FamiliaService {
         this.comunidadeRepositorio = comunidadeRepositorio;
     }
 
-    /** Issue #14 — POST /api/familias */
-    @Transactional
-    public FamiliaResponseDTO criar(FamiliaRequestDTO dto) {
+    /** Issue #14 */
+    public FamiliaResponse criar(FamiliaRequest request) {
         Familia familia = new Familia();
-        familia.setComunidade(buscarComunidade(dto.comunidadeId()));
-        aplicarCamposSimples(familia, dto);
+        familia.setComunidade(buscarComunidade(request.comunidadeId()));
+        aplicarCamposSimples(familia, request);
 
-        // id-informado-pelo-cliente -> Pessoa, só pra fontesRenda conseguir
-        // referenciar uma pessoa nova dentro do mesmo payload.
         Map<UUID, Pessoa> pessoasPorIdDoPayload = new HashMap<>();
-
-        for (PessoaRequestDTO pessoaDTO : dto.pessoas()) {
+        for (PessoaRequest pessoaRequest : request.pessoas()) {
             Pessoa pessoa = new Pessoa();
-            aplicarCamposPessoa(pessoa, pessoaDTO);
+            aplicarCamposPessoa(pessoa, pessoaRequest);
             familia.adicionarPessoa(pessoa);
-            if (pessoaDTO.id() != null) {
-                pessoasPorIdDoPayload.put(pessoaDTO.id(), pessoa);
+            if (pessoaRequest.id() != null) {
+                pessoasPorIdDoPayload.put(pessoaRequest.id(), pessoa);
             }
         }
 
-        for (FonteRendaRequestDTO fonteDTO : dto.fontesRenda()) {
-            FonteRenda fonte = new FonteRenda();
-            fonte.setTipo(fonteDTO.tipo());
-            fonte.setFaixa(fonteDTO.faixa());
-            fonte.setObservacao(fonteDTO.observacao());
-            if (fonteDTO.pessoaId() != null) {
-                Pessoa pessoaDaFonte = pessoasPorIdDoPayload.get(fonteDTO.pessoaId());
-                if (pessoaDaFonte == null) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "fontesRenda.pessoaId não corresponde a nenhuma pessoa do payload: " + fonteDTO.pessoaId());
-                }
-                fonte.setPessoa(pessoaDaFonte);
-            }
-            familia.adicionarFonteRenda(fonte);
+        for (FonteRendaRequest fonteRequest : request.fontesRenda()) {
+            familia.adicionarFonteRenda(criarFonteRenda(fonteRequest, pessoasPorIdDoPayload));
         }
 
-        return FamiliaResponseDTO.from(familiaRepositorio.save(familia));
+        return FamiliaResponse.fromEntity(familiaRepositorio.save(familia));
     }
 
-    /** Issue #15 — PUT /api/familias/{id} */
-    @Transactional
-    public FamiliaResponseDTO atualizar(UUID id, FamiliaRequestDTO dto) {
+    /** Issue #15 */
+    public FamiliaResponse atualizar(UUID id, FamiliaRequest request) {
         Familia familia = familiaRepositorio.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Família não encontrada: " + id));
+                .orElseThrow(() -> new FamiliaNaoEncontradaException(id));
 
-        familia.setComunidade(buscarComunidade(dto.comunidadeId()));
-        aplicarCamposSimples(familia, dto);
+        familia.setComunidade(buscarComunidade(request.comunidadeId()));
+        aplicarCamposSimples(familia, request);
 
         Map<UUID, Pessoa> pessoasAtuaisPorId = new HashMap<>();
         for (Pessoa pessoa : familia.getPessoas()) {
@@ -88,25 +75,24 @@ public class FamiliaService {
         Set<UUID> idsQueContinuam = new HashSet<>();
         Map<UUID, Pessoa> pessoasPorIdDoPayload = new HashMap<>();
 
-        for (PessoaRequestDTO pessoaDTO : dto.pessoas()) {
-            if (pessoaDTO.id() != null && pessoasAtuaisPorId.containsKey(pessoaDTO.id())) {
-                Pessoa existente = pessoasAtuaisPorId.get(pessoaDTO.id());
-                aplicarCamposPessoa(existente, pessoaDTO);
+        for (PessoaRequest pessoaRequest : request.pessoas()) {
+            if (pessoaRequest.id() != null && pessoasAtuaisPorId.containsKey(pessoaRequest.id())) {
+                Pessoa existente = pessoasAtuaisPorId.get(pessoaRequest.id());
+                aplicarCamposPessoa(existente, pessoaRequest);
                 idsQueContinuam.add(existente.getId());
-                pessoasPorIdDoPayload.put(pessoaDTO.id(), existente);
+                pessoasPorIdDoPayload.put(pessoaRequest.id(), existente);
             } else {
                 Pessoa nova = new Pessoa();
-                aplicarCamposPessoa(nova, pessoaDTO);
+                aplicarCamposPessoa(nova, pessoaRequest);
                 familia.adicionarPessoa(nova);
-                if (pessoaDTO.id() != null) {
-                    pessoasPorIdDoPayload.put(pessoaDTO.id(), nova);
+                if (pessoaRequest.id() != null) {
+                    pessoasPorIdDoPayload.put(pessoaRequest.id(), nova);
                 }
             }
         }
 
-        // pessoas que sumiram do payload: antes de remover, desliga a fonte
-        // de renda dela (pessoa_id = null) em vez de deixar o orphanRemoval
-        // tentar apagar a fonte também.
+        // pessoa removida: desliga a fonte de renda dela antes (pessoa_id =
+        // null) em vez de deixar o orphanRemoval tentar apagar a fonte junto
         familia.getPessoas().stream()
                 .filter(p -> p.getId() != null && !idsQueContinuam.contains(p.getId()))
                 .toList()
@@ -123,28 +109,21 @@ public class FamiliaService {
         }
         Set<UUID> idsFontesQueContinuam = new HashSet<>();
 
-        for (FonteRendaRequestDTO fonteDTO : dto.fontesRenda()) {
-            Pessoa pessoaDaFonte = null;
-            if (fonteDTO.pessoaId() != null) {
-                pessoaDaFonte = pessoasPorIdDoPayload.get(fonteDTO.pessoaId());
-                if (pessoaDaFonte == null) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "fontesRenda.pessoaId não corresponde a nenhuma pessoa do payload: " + fonteDTO.pessoaId());
-                }
-            }
+        for (FonteRendaRequest fonteRequest : request.fontesRenda()) {
+            Pessoa pessoaDaFonte = resolverPessoaDaFonte(fonteRequest, pessoasPorIdDoPayload);
 
-            if (fonteDTO.id() != null && fontesAtuaisPorId.containsKey(fonteDTO.id())) {
-                FonteRenda existente = fontesAtuaisPorId.get(fonteDTO.id());
-                existente.setTipo(fonteDTO.tipo());
-                existente.setFaixa(fonteDTO.faixa());
-                existente.setObservacao(fonteDTO.observacao());
+            if (fonteRequest.id() != null && fontesAtuaisPorId.containsKey(fonteRequest.id())) {
+                FonteRenda existente = fontesAtuaisPorId.get(fonteRequest.id());
+                existente.setTipo(fonteRequest.tipo());
+                existente.setFaixa(fonteRequest.faixa());
+                existente.setObservacao(fonteRequest.observacao());
                 existente.setPessoa(pessoaDaFonte);
                 idsFontesQueContinuam.add(existente.getId());
             } else {
                 FonteRenda nova = new FonteRenda();
-                nova.setTipo(fonteDTO.tipo());
-                nova.setFaixa(fonteDTO.faixa());
-                nova.setObservacao(fonteDTO.observacao());
+                nova.setTipo(fonteRequest.tipo());
+                nova.setFaixa(fonteRequest.faixa());
+                nova.setObservacao(fonteRequest.observacao());
                 nova.setPessoa(pessoaDaFonte);
                 familia.adicionarFonteRenda(nova);
             }
@@ -155,71 +134,91 @@ public class FamiliaService {
                 .toList()
                 .forEach(familia::removerFonteRenda);
 
-        return FamiliaResponseDTO.from(familiaRepositorio.save(familia));
+        // entidade gerenciada (mesmo esquema do ComunidadeService.atualizar):
+        // o UPDATE sai no commit da transação, sem precisar de save()
+        return FamiliaResponse.fromEntity(familia);
+    }
+
+    private FonteRenda criarFonteRenda(FonteRendaRequest fonteRequest, Map<UUID, Pessoa> pessoasPorIdDoPayload) {
+        FonteRenda fonte = new FonteRenda();
+        fonte.setTipo(fonteRequest.tipo());
+        fonte.setFaixa(fonteRequest.faixa());
+        fonte.setObservacao(fonteRequest.observacao());
+        fonte.setPessoa(resolverPessoaDaFonte(fonteRequest, pessoasPorIdDoPayload));
+        return fonte;
+    }
+
+    private Pessoa resolverPessoaDaFonte(FonteRendaRequest fonteRequest, Map<UUID, Pessoa> pessoasPorIdDoPayload) {
+        if (fonteRequest.pessoaId() == null) {
+            return null;
+        }
+        Pessoa pessoa = pessoasPorIdDoPayload.get(fonteRequest.pessoaId());
+        if (pessoa == null) {
+            throw new PessoaReferenciadaInvalidaException(fonteRequest.pessoaId());
+        }
+        return pessoa;
     }
 
     private Comunidade buscarComunidade(UUID comunidadeId) {
         return comunidadeRepositorio.findById(comunidadeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "comunidadeId inválido: " + comunidadeId));
+                .orElseThrow(() -> new ComunidadeNaoEncontradaException(comunidadeId));
     }
 
-    private void aplicarCamposSimples(Familia familia, FamiliaRequestDTO dto) {
-        familia.setResponsavelNome(dto.responsavelNome());
-        familia.setResponsavelCpf(dto.responsavelCpf());
-        familia.setTelefone(dto.telefone());
-        familia.setPontoReferencia(dto.pontoReferencia());
-        familia.setTemBanheiro(dto.temBanheiro());
-        familia.setEscoamentoSanitario(dto.escoamentoSanitario());
-        familia.setTratamentoAgua(dto.tratamentoAgua());
-        familia.setObservacoes(dto.observacoes());
+    private void aplicarCamposSimples(Familia familia, FamiliaRequest request) {
+        familia.setResponsavelNome(request.responsavelNome());
+        familia.setResponsavelCpf(request.responsavelCpf());
+        familia.setTelefone(request.telefone());
+        familia.setPontoReferencia(request.pontoReferencia());
+        familia.setTemBanheiro(request.temBanheiro());
+        familia.setEscoamentoSanitario(request.escoamentoSanitario());
+        familia.setTratamentoAgua(request.tratamentoAgua());
+        familia.setObservacoes(request.observacoes());
 
         familia.getAbastecimentoAgua().clear();
-        if (dto.abastecimentoAgua() != null) {
-            familia.getAbastecimentoAgua().addAll(dto.abastecimentoAgua());
+        if (request.abastecimentoAgua() != null) {
+            familia.getAbastecimentoAgua().addAll(request.abastecimentoAgua());
         }
     }
 
-    private void aplicarCamposPessoa(Pessoa pessoa, PessoaRequestDTO dto) {
-        pessoa.setNome(dto.nome());
-        pessoa.setCadastroIncompleto(Boolean.TRUE.equals(dto.cadastroIncompleto()));
-        pessoa.setSexo(dto.sexo());
-        pessoa.setDataNascimento(dto.dataNascimento());
-        pessoa.setIdadeEstimada(dto.idadeEstimada());
+    private void aplicarCamposPessoa(Pessoa pessoa, PessoaRequest request) {
+    pessoa.setNome(request.nome());
+    pessoa.setSexo(request.sexo());
+    pessoa.setDataNascimento(request.dataNascimento());
+    pessoa.setIdadeEstimada(request.idadeEstimada());
 
-        // Regra da issue #14: se idadeEstimada veio sem idadeEstimadaEm,
-        // preenche com a data de hoje no servidor.
-        LocalDate dataEstimativa = dto.idadeEstimadaEm();
-        if (dto.idadeEstimada() != null && dataEstimativa == null) {
-            dataEstimativa = LocalDate.now();
-        }
-        pessoa.setIdadeEstimadaEm(dataEstimativa);
+    // Regra da issue #14: idadeEstimada sem idadeEstimadaEm -> usa hoje.
+    LocalDate dataEstimativa = request.idadeEstimadaEm();
+    if (request.idadeEstimada() != null && dataEstimativa == null) {
+        dataEstimativa = LocalDate.now();
+    }
+    pessoa.setIdadeEstimadaEm(dataEstimativa);
 
-        pessoa.setParentesco(dto.parentesco());
-        pessoa.setEstuda(dto.estuda());
-        pessoa.setSerie(dto.serie());
-        pessoa.setTamanhoRoupa(dto.tamanhoRoupa());
-        pessoa.setNumeroCalcado(converterNumeroCalcado(dto.numeroCalcado()));
-        pessoa.setGestante(dto.gestante());
-        pessoa.setObservacoes(dto.observacoes());
+    // Espelha o chk_pessoa_idade: sem data de nascimento, os dois campos de
+    // estimativa têm que vir juntos (o auto-preenchimento acima já cobre um
+    // lado; aqui pegamos o caso de vir só a data, sem a idade).
+    if (pessoa.getDataNascimento() == null
+            && (pessoa.getIdadeEstimada() == null) != (pessoa.getIdadeEstimadaEm() == null)) {
+        throw new IdadeEstimadaInvalidaException();
     }
 
-    /**
-     * TODO PROVISÓRIO: Pessoa.numeroCalcado é Integer, mas a issue #14 manda
-     * faixa tipo "26/27". Aqui eu só pego o primeiro número e jogo fora o
-     * resto ("26/27" -> 26) pra não travar o build. Ver aviso sobre trocar
-     * o campo pra String antes da migration da tabela pessoa.
-     */
-    private Integer converterNumeroCalcado(String valor) {
-        if (valor == null || valor.isBlank()) {
-            return null;
-        }
-        String primeiroNumero = valor.split("/")[0].trim();
-        try {
-            return Integer.valueOf(primeiroNumero);
-        } catch (NumberFormatException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "numeroCalcado inválido: " + valor);
-        }
+    pessoa.setParentesco(request.parentesco());
+    pessoa.setEstuda(request.estuda());
+    pessoa.setSerie(request.serie());
+    pessoa.setTamanhoRoupa(request.tamanhoRoupa());
+
+    if (request.numeroCalcado() != null && !NumerosCalcado.ehValido(request.numeroCalcado())) {
+        throw new NumeroCalcadoInvalidoException(request.numeroCalcado());
+    }
+    pessoa.setNumeroCalcado(request.numeroCalcado());
+
+    pessoa.setGestante(request.gestante());
+    pessoa.setObservacoes(request.observacoes());
+
+    // RF-09: marca como incompleto se faltar nome ou faltar toda informação
+    // de idade — além de respeitar se o cliente já mandou true explicitamente.
+    // ASSUNÇÃO: confirma com quem escreveu a RF-09 se é exatamente essa a regra.
+    boolean semNome = request.nome() == null || request.nome().isBlank();
+    boolean semIdadeAlguma = pessoa.getDataNascimento() == null && pessoa.getIdadeEstimada() == null;
+    pessoa.setCadastroIncompleto(semNome || semIdadeAlguma || Boolean.TRUE.equals(request.cadastroIncompleto()));
     }
 }

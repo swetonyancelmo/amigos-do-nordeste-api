@@ -1,20 +1,20 @@
-package br.org.amigosdonordeste.cadastro.familia.dto;
+package br.org.amigosdonordeste.cadastro.familia;
 
 import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
-import br.org.amigosdonordeste.cadastro.fonterenda.enuns.FaixaRenda;
-import br.org.amigosdonordeste.cadastro.fonterenda.enuns.TipoFonteRenda;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 
 import java.util.UUID;
 
-public record FonteRendaResponseDTO(
+public record FonteRendaResponse(
         UUID id,
         TipoFonteRenda tipo,
         UUID pessoaId,
         FaixaRenda faixa,
         String observacao
 ) {
-    public static FonteRendaResponseDTO from(FonteRenda fonteRenda) {
-        return new FonteRendaResponseDTO(
+    public static FonteRendaResponse fromEntity(FonteRenda fonteRenda) {
+        return new FonteRendaResponse(
                 fonteRenda.getId(),
                 fonteRenda.getTipo(),
                 fonteRenda.getPessoa() != null ? fonteRenda.getPessoa().getId() : null,
