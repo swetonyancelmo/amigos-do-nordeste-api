@@ -40,6 +40,11 @@ app:
     segredo: ${APP_JWT_SEGREDO:troque-isto-por-um-valor-aleatorio-de-no-minimo-32-bytes}
     validade-acesso: 15m
     validade-renovacao: 7d
+  ativacao-agente:
+    # Codigo de seis digitos: com 5 tentativas por minuto, varrer o espaco todo
+    # levaria anos. Limite por IP, em memoria (ver LimitadorPorIp).
+    max-tentativas: 5
+    janela: 1m
   cors:
     origens: ${APP_CORS_ORIGENS:http://localhost:3000}
   # Em produção precisa ser true (o cookie só viaja em HTTPS).

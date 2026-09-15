@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import br.org.amigosdonordeste.cadastro.agente.CodigoConviteInvalidoException;
 import br.org.amigosdonordeste.cadastro.auth.CredenciaisInvalidasException;
 import br.org.amigosdonordeste.cadastro.auth.SenhaAtualIncorretaException;
 import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
@@ -32,6 +33,16 @@ public class ManipuladorDeErros {
     @ExceptionHandler(CredenciaisInvalidasException.class)
     public ResponseEntity<ErroResposta> credenciais(CredenciaisInvalidasException e) {
         return resposta(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(CodigoConviteInvalidoException.class)
+    public ResponseEntity<ErroResposta> codigoConvite(CodigoConviteInvalidoException e) {
+        return resposta(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(MuitasTentativasException.class)
+    public ResponseEntity<ErroResposta> muitasTentativas(MuitasTentativasException e) {
+        return resposta(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
     }
 
     @ExceptionHandler(SenhaAtualIncorretaException.class)

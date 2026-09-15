@@ -7,4 +7,6 @@ import java.util.UUID;
 
 public interface AgenteRepositorio extends JpaRepository<Agente, UUID> {
     Optional<Agente> findByTokenHashAndAtivoTrue(String tokenHash);
+
+    Optional<Agente> findByCodigoConviteAndAtivoTrue(String codigoConvite);
 }

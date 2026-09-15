@@ -82,6 +82,9 @@ public class SegurancaConfig {
                     "/api/metadados",
                     "/swagger-ui/**",
                     "/swagger-ui.html").permitAll()
+                // Troca do codigo de convite pelo token do aparelho. Aberta porque e
+                // ela que da o acesso; o limite de tentativas por IP esta no service.
+                .requestMatchers(HttpMethod.POST, "/api/agentes/ativar").permitAll()
                 // A unica porta do aparelho da agente. So AGENTE: o administrador
                 // nao envia pre-cadastro, ele aprova.
                 .requestMatchers(HttpMethod.POST, "/api/pre-cadastros").hasRole("AGENTE")
