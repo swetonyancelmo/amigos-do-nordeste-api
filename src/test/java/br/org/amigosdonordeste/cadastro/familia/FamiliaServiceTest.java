@@ -30,6 +30,7 @@ import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.NumeroCalcadoInvalidoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
@@ -213,6 +214,7 @@ class FamiliaServiceTest {
         familiaExistente.adicionarPessoa(bruno);
 
         when(familiaRepositorio.findById(familiaExistente.getId())).thenReturn(Optional.of(familiaExistente));
+        when(familiaRepositorio.saveAndFlush(any(Familia.class))).thenAnswer(chamada -> chamada.getArgument(0));
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
 
         PessoaRequest anaComNomeAtualizado = new PessoaRequest(
@@ -250,6 +252,7 @@ class FamiliaServiceTest {
         familiaExistente.adicionarPessoa(bruno);
 
         when(familiaRepositorio.findById(familiaExistente.getId())).thenReturn(Optional.of(familiaExistente));
+        when(familiaRepositorio.saveAndFlush(any(Familia.class))).thenAnswer(chamada -> chamada.getArgument(0));
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
 
         // só Bruno no payload -> Ana deve sumir
@@ -287,6 +290,7 @@ class FamiliaServiceTest {
         familiaExistente.adicionarFonteRenda(aposentadoria);
 
         when(familiaRepositorio.findById(familiaExistente.getId())).thenReturn(Optional.of(familiaExistente));
+        when(familiaRepositorio.saveAndFlush(any(Familia.class))).thenAnswer(chamada -> chamada.getArgument(0));
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
 
         // avô sumiu do payload; a fonte continua, mas sem pessoaId
@@ -303,5 +307,71 @@ class FamiliaServiceTest {
         assertTrue(resposta.pessoas().isEmpty());
         assertEquals(1, resposta.fontesRenda().size());
         assertNull(resposta.fontesRenda().get(0).pessoaId());
+    }
+
+    @Test
+    @DisplayName("id repetido em pessoas[] é recusado")
+    void rejeitaIdDePessoaDuplicadoNoPayload() {
+        UUID mesmoId = UUID.randomUUID();
+        PessoaRequest primeira = new PessoaRequest(
+                mesmoId, "Ana", null, null, null, null, null, null, null, null, null, null, null, null);
+        PessoaRequest segunda = new PessoaRequest(
+                mesmoId, "Bruno", null, null, null, null, null, null, null, null, null, null, null, null);
+
+        FamiliaRequest request = new FamiliaRequest(
+                comunidadeExistente.getId(), "Maria", null, null, null, true,
+                EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
+                Set.of(), List.of(primeira, segunda), List.of(), null);
+
+        assertThrows(IdDuplicadoNoPayloadException.class, () -> familiaService.criar(request));
+        verify(familiaRepositorio, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CPF com máscara é gravado só com os dígitos")
+    void normalizaCpfDoResponsavel() {
+        when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
+        when(familiaRepositorio.save(any(Familia.class))).thenAnswer(chamada -> chamada.getArgument(0));
+
+        FamiliaRequest request = new FamiliaRequest(
+                comunidadeExistente.getId(), "Maria", "000.000.000-00", null, null, true,
+                EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
+                Set.of(), List.of(), List.of(), null);
+
+        FamiliaResponse resposta = familiaService.criar(request);
+
+        assertEquals("00000000000", resposta.responsavelCpf());
+    }
+
+    @Test
+    @DisplayName("PUT sem idadeEstimadaEm mantém a data já gravada se a idade não mudou")
+    void mantemIdadeEstimadaEmQuandoEstimativaNaoMuda() {
+        Familia familiaExistente = new Familia();
+        familiaExistente.setId(UUID.randomUUID());
+        familiaExistente.setComunidade(comunidadeExistente);
+
+        LocalDate dataOriginal = LocalDate.of(2024, 3, 10);
+        Pessoa avo = new Pessoa();
+        avo.setId(UUID.randomUUID());
+        avo.setNome("Avô");
+        avo.setIdadeEstimada(70);
+        avo.setIdadeEstimadaEm(dataOriginal);
+        familiaExistente.adicionarPessoa(avo);
+
+        when(familiaRepositorio.findById(familiaExistente.getId())).thenReturn(Optional.of(familiaExistente));
+        when(familiaRepositorio.saveAndFlush(any(Familia.class))).thenAnswer(chamada -> chamada.getArgument(0));
+        when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
+
+        PessoaRequest mesmaIdadeSemData = new PessoaRequest(
+                avo.getId(), "Avô", null, null, null, 70, null, null, null, null, null, null, null, null);
+
+        FamiliaRequest request = new FamiliaRequest(
+                comunidadeExistente.getId(), "Maria", null, null, null, true,
+                EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
+                Set.of(), List.of(mesmaIdadeSemData), List.of(), null);
+
+        familiaService.atualizar(familiaExistente.getId(), request);
+
+        assertEquals(dataOriginal, avo.getIdadeEstimadaEm());
     }
 }

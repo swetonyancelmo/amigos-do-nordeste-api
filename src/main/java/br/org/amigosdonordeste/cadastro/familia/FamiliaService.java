@@ -15,6 +15,7 @@ import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
 import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
 import br.org.amigosdonordeste.cadastro.dominio.NumerosCalcado;
 import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.NumeroCalcadoInvalidoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
@@ -38,6 +39,8 @@ public class FamiliaService {
 
     /** Issue #14 */
     public FamiliaResponse criar(FamiliaRequest request) {
+        rejeitarIdsDuplicados(request);
+
         Familia familia = new Familia();
         familia.setComunidade(buscarComunidade(request.comunidadeId()));
         aplicarCamposSimples(familia, request);
@@ -61,6 +64,8 @@ public class FamiliaService {
 
     /** Issue #15 */
     public FamiliaResponse atualizar(UUID id, FamiliaRequest request) {
+        rejeitarIdsDuplicados(request);
+
         Familia familia = familiaRepositorio.findById(id)
                 .orElseThrow(() -> new FamiliaNaoEncontradaException(id));
 
@@ -134,9 +139,30 @@ public class FamiliaService {
                 .toList()
                 .forEach(familia::removerFonteRenda);
 
-        // entidade gerenciada (mesmo esquema do ComunidadeService.atualizar):
-        // o UPDATE sai no commit da transação, sem precisar de save()
-        return FamiliaResponse.fromEntity(familia);
+        // saveAndFlush em vez de confiar só no commit: as pessoas/fontes novas
+        // só ganham id no INSERT, e a resposta precisa devolvê-los — senão o
+        // front manda o membro sem id no próximo PUT e ele é criado de novo
+        return FamiliaResponse.fromEntity(familiaRepositorio.saveAndFlush(familia));
+    }
+
+    /**
+     * Dois itens com o mesmo id no payload cairiam no mesmo ramo "existente" e
+     * o segundo sobrescreveria o primeiro em silêncio (ou, no POST, uma fonte
+     * de renda apontaria pra pessoa errada). Melhor recusar de cara.
+     */
+    private void rejeitarIdsDuplicados(FamiliaRequest request) {
+        Set<UUID> idsPessoas = new HashSet<>();
+        for (PessoaRequest pessoa : request.pessoas()) {
+            if (pessoa.id() != null && !idsPessoas.add(pessoa.id())) {
+                throw new IdDuplicadoNoPayloadException("pessoas", pessoa.id());
+            }
+        }
+        Set<UUID> idsFontes = new HashSet<>();
+        for (FonteRendaRequest fonte : request.fontesRenda()) {
+            if (fonte.id() != null && !idsFontes.add(fonte.id())) {
+                throw new IdDuplicadoNoPayloadException("fontesRenda", fonte.id());
+            }
+        }
     }
 
     private FonteRenda criarFonteRenda(FonteRendaRequest fonteRequest, Map<UUID, Pessoa> pessoasPorIdDoPayload) {
@@ -166,7 +192,7 @@ public class FamiliaService {
 
     private void aplicarCamposSimples(Familia familia, FamiliaRequest request) {
         familia.setResponsavelNome(request.responsavelNome());
-        familia.setResponsavelCpf(request.responsavelCpf());
+        familia.setResponsavelCpf(somenteDigitos(request.responsavelCpf()));
         familia.setTelefone(request.telefone());
         familia.setPontoReferencia(request.pontoReferencia());
         familia.setTemBanheiro(request.temBanheiro());
@@ -180,16 +206,31 @@ public class FamiliaService {
         }
     }
 
+    /** A coluna guarda só os 11 dígitos; o front pode mandar "000.000.000-00". */
+    private static String somenteDigitos(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        return valor.replaceAll("\\D", "");
+    }
+
     private void aplicarCamposPessoa(Pessoa pessoa, PessoaRequest request) {
     pessoa.setNome(request.nome());
     pessoa.setSexo(request.sexo());
     pessoa.setDataNascimento(request.dataNascimento());
+    Integer idadeEstimadaAnterior = pessoa.getIdadeEstimada();
+    LocalDate idadeEstimadaEmAnterior = pessoa.getIdadeEstimadaEm();
     pessoa.setIdadeEstimada(request.idadeEstimada());
 
     // Regra da issue #14: idadeEstimada sem idadeEstimadaEm -> usa hoje.
+    // No PUT, se a estimativa não mudou e a data veio omitida, mantém a data
+    // já gravada — senão "30 anos em 2024" viraria "30 anos em 2026" a cada
+    // salvamento e a idade calculada regrediria.
     LocalDate dataEstimativa = request.idadeEstimadaEm();
     if (request.idadeEstimada() != null && dataEstimativa == null) {
-        dataEstimativa = LocalDate.now();
+        boolean estimativaInalterada = request.idadeEstimada().equals(idadeEstimadaAnterior)
+                && idadeEstimadaEmAnterior != null;
+        dataEstimativa = estimativaInalterada ? idadeEstimadaEmAnterior : LocalDate.now();
     }
     pessoa.setIdadeEstimadaEm(dataEstimativa);
 

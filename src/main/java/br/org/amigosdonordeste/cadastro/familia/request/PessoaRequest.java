@@ -4,6 +4,8 @@ import br.org.amigosdonordeste.cadastro.pessoa.enums.Parentesco;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -16,7 +18,7 @@ import java.util.UUID;
 public record PessoaRequest(
         UUID id,
         // pode vir em branco (RF-09: cadastro incompleto, ex. "filha de Jane" sem nome)
-        String nome,
+        @Size(max = 120) String nome,
         Boolean cadastroIncompleto,
         Sexo sexo,
         LocalDate dataNascimento,
@@ -24,7 +26,7 @@ public record PessoaRequest(
         LocalDate idadeEstimadaEm,
         Parentesco parentesco,
         Boolean estuda,
-        String serie,
+        @Size(max = 40) String serie,
         TamanhoRoupa tamanhoRoupa,
         // validado contra NumerosCalcado.VALORES no FamiliaService
         String numeroCalcado,

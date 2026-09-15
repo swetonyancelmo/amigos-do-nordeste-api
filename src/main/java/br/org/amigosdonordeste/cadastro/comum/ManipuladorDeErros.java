@@ -2,6 +2,7 @@ package br.org.amigosdonordeste.cadastro.comum;
 
 import java.time.OffsetDateTime;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,6 +14,7 @@ import br.org.amigosdonordeste.cadastro.auth.SenhaAtualIncorretaException;
 import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
 import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.NumeroCalcadoInvalidoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
@@ -70,6 +72,20 @@ public class ManipuladorDeErros {
     @ExceptionHandler(IdadeEstimadaInvalidaException.class)
     public ResponseEntity<ErroResposta> idadeEstimadaInvalida(IdadeEstimadaInvalidaException e) {
     return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(IdDuplicadoNoPayloadException.class)
+    public ResponseEntity<ErroResposta> idDuplicado(IdDuplicadoNoPayloadException e) {
+        return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    /**
+     * Rede de segurança: constraint do banco (tamanho, check, unique) que
+     * escapou do Bean Validation. Sem isso viraria 500 com stack trace.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErroResposta> integridade(DataIntegrityViolationException e) {
+        return resposta(HttpStatus.BAD_REQUEST, "Dados inválidos: violam uma restrição do cadastro.");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
