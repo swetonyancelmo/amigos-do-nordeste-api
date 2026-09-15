@@ -12,9 +12,10 @@ import java.time.OffsetDateTime;
 /**
  * Troca o codigo de convite pelo token do aparelho.
  *
- * O codigo e de uso unico: vira null na mesma transacao em que o token e
- * gerado, entao a segunda tentativa com o mesmo codigo nao acha agente nenhuma
- * — e recebe a mesma resposta de um codigo que nunca existiu.
+ * O codigo e de uso unico, e isso e garantido pelo banco, nao pelo Java: o
+ * UPDATE condicional do repositorio so grava o hash se o codigo ainda estiver
+ * na linha. Uma segunda tentativa — mesmo simultanea — nao encontra nada e
+ * recebe a mesma resposta de um codigo que nunca existiu.
  */
 @Service
 public class AtivacaoAgenteService {
@@ -38,14 +39,15 @@ public class AtivacaoAgenteService {
         // varredura de codigos, e ela nao avisa quando acerta.
         limitador.registrar(ip);
 
-        Agente agente = agentes.findByCodigoConviteAndAtivoTrue(codigo)
-            .orElseThrow(CodigoConviteInvalidoException::new);
-
         String token = tokens.gerar();
-        agente.setTokenHash(TokenAgenteService.hash(token));
-        agente.setCodigoConvite(null);
-        agente.setAtivadoEm(OffsetDateTime.now());
-        agentes.save(agente);
+        String hash = TokenAgenteService.hash(token);
+
+        if (agentes.consumirCodigoConvite(codigo, hash, OffsetDateTime.now()) != 1) {
+            throw new CodigoConviteInvalidoException();
+        }
+
+        Agente agente = agentes.findByTokenHashAndAtivoTrue(hash)
+            .orElseThrow(CodigoConviteInvalidoException::new);
 
         // O token em claro sai daqui uma vez e nao volta: nem no banco, nem em log.
         return new AtivacaoAgenteResposta(token, agente.getNome());
