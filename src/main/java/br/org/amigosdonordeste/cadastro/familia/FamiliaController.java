@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import br.org.amigosdonordeste.cadastro.familia.request.FamiliaRequest;
+import br.org.amigosdonordeste.cadastro.familia.request.AtualizarFamiliaRequisicao;
+import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,13 +31,13 @@ public class FamiliaController {
     @Operation(summary = "Cadastra uma família com membros e fontes de renda numa única chamada")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public FamiliaResponse criar(@Valid @RequestBody FamiliaRequest request) {
+    public FamiliaResponse criar(@Valid @RequestBody CriarFamiliaRequisicao request) {
         return familiaService.criar(request);
     }
 
     @Operation(summary = "Atualiza uma família existente, com merge de membros e fontes de renda")
     @PutMapping("/{id}")
-    public FamiliaResponse atualizar(@PathVariable UUID id, @Valid @RequestBody FamiliaRequest request) {
+    public FamiliaResponse atualizar(@PathVariable UUID id, @Valid @RequestBody AtualizarFamiliaRequisicao request) {
         return familiaService.atualizar(id, request);
     }
 }

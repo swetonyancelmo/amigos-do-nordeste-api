@@ -2,6 +2,7 @@ package br.org.amigosdonordeste.cadastro.pessoa;
 
 import br.org.amigosdonordeste.cadastro.familia.Familia;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Parentesco;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.Serie;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 import jakarta.persistence.*;
@@ -61,8 +62,9 @@ public class Pessoa {
 
     private Boolean estuda;
 
+    @Enumerated(EnumType.STRING)
     @Column(length = 40)
-    private String serie;
+    private Serie serie;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tamanho_roupa", length = 20)

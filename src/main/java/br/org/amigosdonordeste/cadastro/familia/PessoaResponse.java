@@ -3,6 +3,7 @@ package br.org.amigosdonordeste.cadastro.familia;
 import br.org.amigosdonordeste.cadastro.dominio.Idade;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Parentesco;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.Serie;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 
@@ -21,7 +22,7 @@ public record PessoaResponse(
         Integer idade,
         Parentesco parentesco,
         Boolean estuda,
-        String serie,
+        Serie serie,
         TamanhoRoupa tamanhoRoupa,
         String numeroCalcado,
         Boolean gestante,
