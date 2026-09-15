@@ -26,6 +26,17 @@ spring:
 
 server:
   port: ${PORT:3333}
+  # Atras de um proxy reverso (Render, Fly), o IP que a API enxerga e o do
+  # proxy, e o limite de tentativas por IP viraria um limite global. Em
+  # producao ligue "native": o Tomcat passa a ler X-Forwarded-For, mas so de
+  # proxies confiaveis (remoteip abaixo). Sem proxy, deixe "none" — senao
+  # qualquer cliente forja o proprio IP pelo cabecalho.
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:none}
+  tomcat:
+    remoteip:
+      # Regex dos IPs de proxy em que se confia, alem das faixas privadas que
+      # o Tomcat ja considera internas. Vazio: so as faixas privadas.
+      trusted-proxies: ${SERVER_PROXIES_CONFIAVEIS:}
   error:
     include-message: never
     include-stacktrace: never
@@ -40,6 +51,11 @@ app:
     segredo: ${APP_JWT_SEGREDO:troque-isto-por-um-valor-aleatorio-de-no-minimo-32-bytes}
     validade-acesso: 15m
     validade-renovacao: 7d
+  ativacao-agente:
+    # Codigo de seis digitos: com 5 tentativas por minuto, varrer o espaco todo
+    # levaria anos. Limite por IP, em memoria (ver LimitadorPorIp).
+    max-tentativas: 5
+    janela: 1m
   cors:
     origens: ${APP_CORS_ORIGENS:http://localhost:3000}
   # Em produção precisa ser true (o cookie só viaja em HTTPS).
