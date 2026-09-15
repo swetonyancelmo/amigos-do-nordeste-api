@@ -1,7 +1,9 @@
 package br.org.amigosdonordeste.cadastro.familia;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -19,9 +21,14 @@ import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadEx
 import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.NumeroCalcadoInvalidoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
-import br.org.amigosdonordeste.cadastro.familia.request.FamiliaRequest;
-import br.org.amigosdonordeste.cadastro.familia.request.FonteRendaRequest;
-import br.org.amigosdonordeste.cadastro.familia.request.PessoaRequest;
+import br.org.amigosdonordeste.cadastro.familia.request.AtualizarFamiliaRequisicao;
+import br.org.amigosdonordeste.cadastro.familia.request.AtualizarFamiliaRequisicao.AtualizarFonteRenda;
+import br.org.amigosdonordeste.cadastro.familia.request.AtualizarFamiliaRequisicao.AtualizarPessoa;
+import br.org.amigosdonordeste.cadastro.familia.request.CamposFamilia;
+import br.org.amigosdonordeste.cadastro.familia.request.CamposPessoa;
+import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao;
+import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao.CriarFonteRenda;
+import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao.CriarPessoa;
 import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 
@@ -38,32 +45,35 @@ public class FamiliaService {
     }
 
     /** Issue #14 */
-    public FamiliaResponse criar(FamiliaRequest request) {
-        rejeitarIdsDuplicados(request);
-
+    public FamiliaResponse criar(CriarFamiliaRequisicao request) {
         Familia familia = new Familia();
         familia.setComunidade(buscarComunidade(request.comunidadeId()));
         aplicarCamposSimples(familia, request);
 
-        Map<UUID, Pessoa> pessoasPorIdDoPayload = new HashMap<>();
-        for (PessoaRequest pessoaRequest : request.pessoas()) {
+        // no POST ninguém tem id ainda: fontesRenda[].pessoaIndice aponta
+        // pra posição em pessoas[]
+        List<Pessoa> pessoasNaOrdemDoPayload = new ArrayList<>();
+        for (CriarPessoa pessoaRequest : request.pessoas()) {
             Pessoa pessoa = new Pessoa();
             aplicarCamposPessoa(pessoa, pessoaRequest);
             familia.adicionarPessoa(pessoa);
-            if (pessoaRequest.id() != null) {
-                pessoasPorIdDoPayload.put(pessoaRequest.id(), pessoa);
-            }
+            pessoasNaOrdemDoPayload.add(pessoa);
         }
 
-        for (FonteRendaRequest fonteRequest : request.fontesRenda()) {
-            familia.adicionarFonteRenda(criarFonteRenda(fonteRequest, pessoasPorIdDoPayload));
+        for (CriarFonteRenda fonteRequest : request.fontesRenda()) {
+            FonteRenda fonte = new FonteRenda();
+            fonte.setTipo(fonteRequest.tipo());
+            fonte.setFaixa(fonteRequest.faixa());
+            fonte.setObservacao(fonteRequest.observacao());
+            fonte.setPessoa(resolverPessoaPorIndice(fonteRequest.pessoaIndice(), pessoasNaOrdemDoPayload));
+            familia.adicionarFonteRenda(fonte);
         }
 
         return FamiliaResponse.fromEntity(familiaRepositorio.save(familia));
     }
 
     /** Issue #15 */
-    public FamiliaResponse atualizar(UUID id, FamiliaRequest request) {
+    public FamiliaResponse atualizar(UUID id, AtualizarFamiliaRequisicao request) {
         rejeitarIdsDuplicados(request);
 
         Familia familia = familiaRepositorio.findById(id)
@@ -78,21 +88,19 @@ public class FamiliaService {
         }
 
         Set<UUID> idsQueContinuam = new HashSet<>();
-        Map<UUID, Pessoa> pessoasPorIdDoPayload = new HashMap<>();
 
-        for (PessoaRequest pessoaRequest : request.pessoas()) {
+        for (AtualizarPessoa pessoaRequest : request.pessoas()) {
             if (pessoaRequest.id() != null && pessoasAtuaisPorId.containsKey(pessoaRequest.id())) {
                 Pessoa existente = pessoasAtuaisPorId.get(pessoaRequest.id());
                 aplicarCamposPessoa(existente, pessoaRequest);
                 idsQueContinuam.add(existente.getId());
-                pessoasPorIdDoPayload.put(pessoaRequest.id(), existente);
             } else {
+                // id nulo ou de pessoa que não é desta família: cria nova, sem
+                // aproveitar o id — é o que impede o JPA de "mover" uma pessoa
+                // de outra família pra cá
                 Pessoa nova = new Pessoa();
                 aplicarCamposPessoa(nova, pessoaRequest);
                 familia.adicionarPessoa(nova);
-                if (pessoaRequest.id() != null) {
-                    pessoasPorIdDoPayload.put(pessoaRequest.id(), nova);
-                }
             }
         }
 
@@ -114,8 +122,8 @@ public class FamiliaService {
         }
         Set<UUID> idsFontesQueContinuam = new HashSet<>();
 
-        for (FonteRendaRequest fonteRequest : request.fontesRenda()) {
-            Pessoa pessoaDaFonte = resolverPessoaDaFonte(fonteRequest, pessoasPorIdDoPayload);
+        for (AtualizarFonteRenda fonteRequest : request.fontesRenda()) {
+            Pessoa pessoaDaFonte = resolverPessoaPorId(fonteRequest.pessoaId(), pessoasAtuaisPorId, idsQueContinuam);
 
             if (fonteRequest.id() != null && fontesAtuaisPorId.containsKey(fonteRequest.id())) {
                 FonteRenda existente = fontesAtuaisPorId.get(fonteRequest.id());
@@ -147,42 +155,47 @@ public class FamiliaService {
 
     /**
      * Dois itens com o mesmo id no payload cairiam no mesmo ramo "existente" e
-     * o segundo sobrescreveria o primeiro em silêncio (ou, no POST, uma fonte
-     * de renda apontaria pra pessoa errada). Melhor recusar de cara.
+     * o segundo sobrescreveria o primeiro em silêncio. Melhor recusar de cara.
      */
-    private void rejeitarIdsDuplicados(FamiliaRequest request) {
+    private void rejeitarIdsDuplicados(AtualizarFamiliaRequisicao request) {
         Set<UUID> idsPessoas = new HashSet<>();
-        for (PessoaRequest pessoa : request.pessoas()) {
+        for (AtualizarPessoa pessoa : request.pessoas()) {
             if (pessoa.id() != null && !idsPessoas.add(pessoa.id())) {
                 throw new IdDuplicadoNoPayloadException("pessoas", pessoa.id());
             }
         }
         Set<UUID> idsFontes = new HashSet<>();
-        for (FonteRendaRequest fonte : request.fontesRenda()) {
+        for (AtualizarFonteRenda fonte : request.fontesRenda()) {
             if (fonte.id() != null && !idsFontes.add(fonte.id())) {
                 throw new IdDuplicadoNoPayloadException("fontesRenda", fonte.id());
             }
         }
     }
 
-    private FonteRenda criarFonteRenda(FonteRendaRequest fonteRequest, Map<UUID, Pessoa> pessoasPorIdDoPayload) {
-        FonteRenda fonte = new FonteRenda();
-        fonte.setTipo(fonteRequest.tipo());
-        fonte.setFaixa(fonteRequest.faixa());
-        fonte.setObservacao(fonteRequest.observacao());
-        fonte.setPessoa(resolverPessoaDaFonte(fonteRequest, pessoasPorIdDoPayload));
-        return fonte;
-    }
-
-    private Pessoa resolverPessoaDaFonte(FonteRendaRequest fonteRequest, Map<UUID, Pessoa> pessoasPorIdDoPayload) {
-        if (fonteRequest.pessoaId() == null) {
+    /** POST: a pessoa é a de posição pessoaIndice em pessoas[]. */
+    private Pessoa resolverPessoaPorIndice(Integer pessoaIndice, List<Pessoa> pessoasNaOrdemDoPayload) {
+        if (pessoaIndice == null) {
             return null;
         }
-        Pessoa pessoa = pessoasPorIdDoPayload.get(fonteRequest.pessoaId());
-        if (pessoa == null) {
-            throw new PessoaReferenciadaInvalidaException(fonteRequest.pessoaId());
+        if (pessoaIndice < 0 || pessoaIndice >= pessoasNaOrdemDoPayload.size()) {
+            throw new PessoaReferenciadaInvalidaException(pessoaIndice, pessoasNaOrdemDoPayload.size());
         }
-        return pessoa;
+        return pessoasNaOrdemDoPayload.get(pessoaIndice);
+    }
+
+    /**
+     * PUT: a pessoa tem que já existir nesta família e continuar no payload
+     * (se saiu de pessoas[], ela vai ser removida — não dá pra amarrar fonte
+     * a ela).
+     */
+    private Pessoa resolverPessoaPorId(UUID pessoaId, Map<UUID, Pessoa> pessoasAtuaisPorId, Set<UUID> idsQueContinuam) {
+        if (pessoaId == null) {
+            return null;
+        }
+        if (!idsQueContinuam.contains(pessoaId)) {
+            throw new PessoaReferenciadaInvalidaException(pessoaId);
+        }
+        return pessoasAtuaisPorId.get(pessoaId);
     }
 
     private Comunidade buscarComunidade(UUID comunidadeId) {
@@ -190,7 +203,7 @@ public class FamiliaService {
                 .orElseThrow(() -> new ComunidadeNaoEncontradaException(comunidadeId));
     }
 
-    private void aplicarCamposSimples(Familia familia, FamiliaRequest request) {
+    private void aplicarCamposSimples(Familia familia, CamposFamilia request) {
         familia.setResponsavelNome(request.responsavelNome());
         familia.setResponsavelCpf(somenteDigitos(request.responsavelCpf()));
         familia.setTelefone(request.telefone());
@@ -214,7 +227,7 @@ public class FamiliaService {
         return valor.replaceAll("\\D", "");
     }
 
-    private void aplicarCamposPessoa(Pessoa pessoa, PessoaRequest request) {
+    private void aplicarCamposPessoa(Pessoa pessoa, CamposPessoa request) {
     pessoa.setNome(request.nome());
     pessoa.setSexo(request.sexo());
     pessoa.setDataNascimento(request.dataNascimento());
