@@ -1,18 +1,25 @@
 package br.org.amigosdonordeste.cadastro.comum;
 
-import br.org.amigosdonordeste.cadastro.auth.CredenciaisInvalidasException;
-import br.org.amigosdonordeste.cadastro.auth.SenhaAtualIncorretaException;
-import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
-import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
-import br.org.amigosdonordeste.cadastro.municipio.MunicipioNaoEncontradoException;
-import br.org.amigosdonordeste.cadastro.usuario.EmailJaCadastradoException;
+import java.time.OffsetDateTime;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.OffsetDateTime;
+import br.org.amigosdonordeste.cadastro.auth.CredenciaisInvalidasException;
+import br.org.amigosdonordeste.cadastro.auth.SenhaAtualIncorretaException;
+import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
+import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadException;
+import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
+import br.org.amigosdonordeste.cadastro.familia.exception.NumeroCalcadoInvalidoException;
+import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
+import br.org.amigosdonordeste.cadastro.municipio.MunicipioNaoEncontradoException;
+import br.org.amigosdonordeste.cadastro.usuario.EmailJaCadastradoException;
 
 /**
  * Toda resposta de erro sai no mesmo formato, com a chave `message`, porque e o
@@ -45,6 +52,40 @@ public class ManipuladorDeErros {
     @ExceptionHandler(MunicipioNaoEncontradoException.class)
     public ResponseEntity<ErroResposta> municipioNaoEncontrado(MunicipioNaoEncontradoException e) {
         return resposta(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(FamiliaNaoEncontradaException.class)
+    public ResponseEntity<ErroResposta> familiaNaoEncontrada(FamiliaNaoEncontradaException e) {
+    return resposta(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(PessoaReferenciadaInvalidaException.class)
+    public ResponseEntity<ErroResposta> pessoaReferenciadaInvalida(PessoaReferenciadaInvalidaException e) {
+    return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(NumeroCalcadoInvalidoException.class)
+    public ResponseEntity<ErroResposta> numeroCalcadoInvalido(NumeroCalcadoInvalidoException e) {
+    return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(IdadeEstimadaInvalidaException.class)
+    public ResponseEntity<ErroResposta> idadeEstimadaInvalida(IdadeEstimadaInvalidaException e) {
+    return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(IdDuplicadoNoPayloadException.class)
+    public ResponseEntity<ErroResposta> idDuplicado(IdDuplicadoNoPayloadException e) {
+        return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    /**
+     * Rede de segurança: constraint do banco (tamanho, check, unique) que
+     * escapou do Bean Validation. Sem isso viraria 500 com stack trace.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErroResposta> integridade(DataIntegrityViolationException e) {
+        return resposta(HttpStatus.BAD_REQUEST, "Dados inválidos: violam uma restrição do cadastro.");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
