@@ -1,5 +1,6 @@
 package br.org.amigosdonordeste.cadastro.agente;
 
+import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroRepositorio;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,10 +38,13 @@ class AtivacaoAgenteTest {
 
     @Autowired MockMvc mvc;
     @Autowired AgenteRepositorio agentes;
+    @Autowired PreCadastroRepositorio preCadastros;
     @Autowired ObjectMapper json;
 
     @BeforeEach
     void preparar() {
+        // pre_cadastro referencia agente: limpa primeiro
+        preCadastros.deleteAll();
         agentes.deleteAll();
     }
 

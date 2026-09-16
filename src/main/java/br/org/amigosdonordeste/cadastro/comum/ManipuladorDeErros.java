@@ -20,6 +20,7 @@ import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaE
 import br.org.amigosdonordeste.cadastro.familia.exception.NumeroCalcadoInvalidoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
 import br.org.amigosdonordeste.cadastro.municipio.MunicipioNaoEncontradoException;
+import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroInvalidoException;
 import br.org.amigosdonordeste.cadastro.usuario.EmailJaCadastradoException;
 
 /**
@@ -87,6 +88,11 @@ public class ManipuladorDeErros {
 
     @ExceptionHandler(IdDuplicadoNoPayloadException.class)
     public ResponseEntity<ErroResposta> idDuplicado(IdDuplicadoNoPayloadException e) {
+        return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(PreCadastroInvalidoException.class)
+    public ResponseEntity<ErroResposta> preCadastroInvalido(PreCadastroInvalidoException e) {
         return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 

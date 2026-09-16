@@ -4,6 +4,7 @@ import br.org.amigosdonordeste.cadastro.agente.Agente;
 import br.org.amigosdonordeste.cadastro.agente.AgenteRepositorio;
 import br.org.amigosdonordeste.cadastro.agente.TokenAgenteService;
 import br.org.amigosdonordeste.cadastro.auth.JwtService;
+import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroRepositorio;
 import br.org.amigosdonordeste.cadastro.usuario.Papel;
 import br.org.amigosdonordeste.cadastro.usuario.Usuario;
 import br.org.amigosdonordeste.cadastro.usuario.UsuarioRepositorio;
@@ -28,9 +29,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *  - um token de administrador nao envia pre-cadastro;
  *  - um token de aparelho desconhecido ou de agente desativada nao autentica.
  *
- * A rota POST /api/pre-cadastros ainda nao tem controller (issue #33). A regra
- * de acesso roda antes do roteamento, entao aqui o que se confere e: com o
- * papel errado e 403; com o papel certo NAO e 401 nem 403.
+ * A regra de acesso roda antes do roteamento, entao aqui o que se confere e:
+ * com o papel errado e 403; com o papel certo NAO e 401 nem 403 (o corpo `{}`
+ * cai em 400 no controller, e isso basta). O contrato da rota em si esta em
+ * PreCadastroTest.
  *
  * Dados ficticios — nenhum nome real entra em teste.
  */
@@ -42,6 +44,7 @@ class SegurancaPapeisTest {
     @Autowired MockMvc mvc;
     @Autowired UsuarioRepositorio usuarios;
     @Autowired AgenteRepositorio agentes;
+    @Autowired PreCadastroRepositorio preCadastros;
     @Autowired JwtService jwt;
     @Autowired TokenAgenteService tokens;
 
@@ -51,6 +54,8 @@ class SegurancaPapeisTest {
 
     @BeforeEach
     void preparar() {
+        // pre_cadastro referencia agente: limpa primeiro
+        preCadastros.deleteAll();
         agentes.deleteAll();
         usuarios.deleteAll();
 
