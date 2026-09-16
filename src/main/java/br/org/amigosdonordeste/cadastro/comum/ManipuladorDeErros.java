@@ -21,6 +21,8 @@ import br.org.amigosdonordeste.cadastro.familia.exception.NumeroCalcadoInvalidoE
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
 import br.org.amigosdonordeste.cadastro.municipio.MunicipioNaoEncontradoException;
 import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroInvalidoException;
+import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroJaAvaliadoException;
+import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroNaoEncontradoException;
 import br.org.amigosdonordeste.cadastro.usuario.EmailJaCadastradoException;
 
 /**
@@ -94,6 +96,16 @@ public class ManipuladorDeErros {
     @ExceptionHandler(PreCadastroInvalidoException.class)
     public ResponseEntity<ErroResposta> preCadastroInvalido(PreCadastroInvalidoException e) {
         return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(PreCadastroNaoEncontradoException.class)
+    public ResponseEntity<ErroResposta> preCadastroNaoEncontrado(PreCadastroNaoEncontradoException e) {
+        return resposta(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(PreCadastroJaAvaliadoException.class)
+    public ResponseEntity<ErroResposta> preCadastroJaAvaliado(PreCadastroJaAvaliadoException e) {
+        return resposta(HttpStatus.CONFLICT, e.getMessage());
     }
 
     /**
