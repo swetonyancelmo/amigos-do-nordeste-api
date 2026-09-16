@@ -32,4 +32,19 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
     List<Familia> listarComComunidade();
 
     List<Familia> findByComunidadeIdOrderByResponsavelNomeAsc(UUID comunidadeId);
+
+    /**
+     * Deteccao de duplicata por nome, dentro da comunidade. unaccent (extensao
+     * instalada na V1) porque o cadastro vem de papel: "Jose" tem que achar
+     * "José". No perfil de teste o H2 recebe um alias UNACCENT feito em Java
+     * (ver application-test.yml).
+     */
+    @Query(value = """
+        select f.* from familia f
+        where f.comunidade_id = :comunidadeId
+          and unaccent(lower(trim(f.responsavel_nome))) = unaccent(lower(trim(:nome)))
+        order by f.responsavel_nome
+        """, nativeQuery = true)
+    List<Familia> buscarPorNomeParecidoNaComunidade(@Param("comunidadeId") UUID comunidadeId,
+                                                    @Param("nome") String nome);
 }

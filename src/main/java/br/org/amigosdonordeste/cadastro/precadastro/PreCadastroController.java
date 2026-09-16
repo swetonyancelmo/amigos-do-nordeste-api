@@ -3,6 +3,7 @@ package br.org.amigosdonordeste.cadastro.precadastro;
 import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroRequisicao;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroResposta;
+import br.org.amigosdonordeste.cadastro.precadastro.dto.PreCadastroResumoResposta;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -13,19 +14,22 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
- * A unica porta do aparelho da agente. SegurancaConfig ja restringe a rota a
- * ROLE_AGENTE; o @PreAuthorize repete a regra aqui para ela nao depender so
- * da lista de la.
+ * O POST e a unica porta do aparelho da agente. SegurancaConfig ja restringe
+ * essa rota a ROLE_AGENTE; o @PreAuthorize repete a regra aqui para ela nao
+ * depender so da lista de la. O GET e do painel (ADMIN, o padrao de toda rota).
  *
- * O corpo chega como JsonNode, nao como o DTO: e o JSON bruto que fica
+ * O corpo do POST chega como JsonNode, nao como o DTO: e o JSON bruto que fica
  * guardado em pre_cadastro.payload. Se o binding fosse direto no record, um
  * campo que uma versao mais nova do app mandasse e o servidor ainda nao
  * conhecesse sumiria antes de chegar a revisao. A conversao e a validacao do
@@ -40,6 +44,24 @@ public class PreCadastroController {
 
     public PreCadastroController(PreCadastroService service) {
         this.service = service;
+    }
+
+    @Operation(summary = "Listar a fila de pré-cadastros (tela de Chamados)",
+        description = "Cada item traz responsável, comunidade, total de pessoas (calculado), quem enviou, quando "
+            + "e possivelDuplicata: família já cadastrada na mesma comunidade com o mesmo telefone ou nome "
+            + "parecido (sem acento), ou null. É só aviso — quem decide é a pessoa que revisa.",
+        security = @SecurityRequirement(name = "bearer"))
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista, mais antigo primeiro"),
+        @ApiResponse(responseCode = "401", description = "Sem token de administrador",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class)))
+    })
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<PreCadastroResumoResposta> listar(
+            @io.swagger.v3.oas.annotations.Parameter(description = "Situação da fila; sem ela, lista todas")
+            @RequestParam(required = false) SituacaoPreCadastro situacao) {
+        return service.listar(situacao);
     }
 
     @Operation(summary = "Enviar um pré-cadastro do aparelho da agente",
