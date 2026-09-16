@@ -18,8 +18,8 @@ import java.util.UUID;
  * ids VEM no payload: o aparelho os gera offline. O da familia e a chave de
  * idempotencia; os das pessoas so acompanham para o app reconciliar depois.
  *
- * O payload inteiro e guardado como chegou (pre_cadastro.payload), entao o
- * que nao e validado aqui tambem nao se perde.
+ * O que vai para pre_cadastro.payload e o JSON bruto, nao este record: campo
+ * que o app mandar e ainda nao estiver declarado aqui tambem fica guardado.
  */
 public record EnviarPreCadastroRequisicao(
     @Schema(description = "UUID gerado no aparelho. Reenviar o mesmo id nunca cria outro registro.",
@@ -64,7 +64,7 @@ public record EnviarPreCadastroRequisicao(
 
         @PositiveOrZero Integer idadeEstimada,
 
-        @Schema(description = "Obrigatória quando idadeEstimada vier: sem ela a idade não envelhece")
+        @Schema(description = "Anda junto com idadeEstimada: um sem o outro é recusado. Sem ela a idade não envelhece")
         LocalDate idadeEstimadaEm
     ) { }
 }

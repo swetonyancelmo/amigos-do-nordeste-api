@@ -7,10 +7,13 @@ import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroRequisi
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroResposta;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.ResultadoEnvio;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Validator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.UUID;
 
 /**
@@ -31,18 +34,28 @@ public class PreCadastroService {
     private final AgenteRepositorio agentes;
     private final ComunidadeRepositorio comunidades;
     private final ObjectMapper json;
+    private final Validator validador;
 
     public PreCadastroService(PreCadastroRepositorio preCadastros,
                               AgenteRepositorio agentes,
                               ComunidadeRepositorio comunidades,
-                              ObjectMapper json) {
+                              ObjectMapper json,
+                              Validator validador) {
         this.preCadastros = preCadastros;
         this.agentes = agentes;
         this.comunidades = comunidades;
         this.json = json;
+        this.validador = validador;
     }
 
-    public EnviarPreCadastroResposta receber(UUID agenteId, EnviarPreCadastroRequisicao requisicao) {
+    /**
+     * @param corpo o JSON como o aparelho mandou. E ele, e nao o DTO, que vai
+     *              para pre_cadastro.payload: campo que o servidor ainda nao
+     *              conhece tambem fica guardado para a revisao.
+     */
+    public EnviarPreCadastroResposta receber(UUID agenteId, JsonNode corpo) {
+        EnviarPreCadastroRequisicao requisicao = converter(corpo);
+
         if (preCadastros.existsById(requisicao.id())) {
             return new EnviarPreCadastroResposta(requisicao.id(), ResultadoEnvio.JA_RECEBIDO);
         }
@@ -57,7 +70,7 @@ public class PreCadastroService {
             // comunidadeNome que ficou no payload.
             comunidades.findById(requisicao.comunidadeId()).ifPresent(preCadastro::setComunidade);
         }
-        preCadastro.setPayload(serializar(requisicao));
+        preCadastro.setPayload(corpo.toString());
 
         try {
             preCadastros.saveAndFlush(preCadastro);
@@ -75,9 +88,11 @@ public class PreCadastroService {
     /**
      * Duas regras que o Bean Validation nao expressa:
      *  - nome so pode faltar em cadastro incompleto (RF-09);
-     *  - idadeEstimada exige idadeEstimadaEm. Aqui nao se assume "hoje" como
-     *    no POST /api/familias: o aparelho sabe quando estimou, e o envio pode
-     *    acontecer dias depois.
+     *  - idadeEstimada e idadeEstimadaEm andam juntos: um sem o outro e
+     *    recusado. Aqui nao se assume "hoje" como no POST /api/familias — o
+     *    aparelho sabe quando estimou, e o envio pode acontecer dias depois.
+     *    E a data sozinha nao vale nada; se passasse, a aprovacao travaria no
+     *    chk_pessoa_idade sem a agente ter como corrigir.
      */
     private static void validarPessoa(PessoaPreCadastro pessoa) {
         boolean semNome = pessoa.nome() == null || pessoa.nome().isBlank();
@@ -85,17 +100,29 @@ public class PreCadastroService {
             throw new PreCadastroInvalidoException(
                 "pessoas: nome só pode faltar quando cadastroIncompleto é true.");
         }
-        if (pessoa.idadeEstimada() != null && pessoa.idadeEstimadaEm() == null) {
+        if ((pessoa.idadeEstimada() == null) != (pessoa.idadeEstimadaEm() == null)) {
             throw new PreCadastroInvalidoException(
-                "pessoas: idadeEstimada precisa vir acompanhada de idadeEstimadaEm.");
+                "pessoas: idadeEstimada e idadeEstimadaEm precisam vir juntos.");
         }
     }
 
-    private String serializar(EnviarPreCadastroRequisicao requisicao) {
+    /**
+     * Faz a mao o que @Valid @RequestBody faria: converte o JSON no DTO e roda
+     * o Bean Validation. Erro de formato (UUID, data, enum) e de constraint
+     * viram o mesmo 400 dos outros endpoints.
+     */
+    private EnviarPreCadastroRequisicao converter(JsonNode corpo) {
+        EnviarPreCadastroRequisicao requisicao;
         try {
-            return json.writeValueAsString(requisicao);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Não foi possível guardar o payload do pré-cadastro", e);
+            requisicao = json.treeToValue(corpo, EnviarPreCadastroRequisicao.class);
+        } catch (IllegalArgumentException | JsonProcessingException e) {
+            throw new PreCadastroInvalidoException("Corpo do pré-cadastro inválido: campo com formato errado.");
         }
+        validador.validate(requisicao).stream()
+            .min(Comparator.comparing(v -> v.getPropertyPath().toString()))
+            .ifPresent(v -> {
+                throw new PreCadastroInvalidoException(v.getPropertyPath() + ": " + v.getMessage());
+            });
+        return requisicao;
     }
 }

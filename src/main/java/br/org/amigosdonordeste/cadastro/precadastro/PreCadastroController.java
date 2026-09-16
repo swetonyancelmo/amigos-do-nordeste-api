@@ -10,7 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,6 +24,12 @@ import java.util.UUID;
  * A unica porta do aparelho da agente. SegurancaConfig ja restringe a rota a
  * ROLE_AGENTE; o @PreAuthorize repete a regra aqui para ela nao depender so
  * da lista de la.
+ *
+ * O corpo chega como JsonNode, nao como o DTO: e o JSON bruto que fica
+ * guardado em pre_cadastro.payload. Se o binding fosse direto no record, um
+ * campo que uma versao mais nova do app mandasse e o servidor ainda nao
+ * conhecesse sumiria antes de chegar a revisao. A conversao e a validacao do
+ * DTO acontecem no service.
  */
 @Tag(name = "pre-cadastros")
 @RestController
@@ -50,7 +56,9 @@ public class PreCadastroController {
     @PostMapping
     @PreAuthorize("hasRole('AGENTE')")
     public EnviarPreCadastroResposta enviar(@AuthenticationPrincipal String agenteId,
-                                            @Valid @RequestBody EnviarPreCadastroRequisicao requisicao) {
-        return service.receber(UUID.fromString(agenteId), requisicao);
+                                            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                                                content = @Content(schema = @Schema(implementation = EnviarPreCadastroRequisicao.class)))
+                                            @RequestBody JsonNode corpo) {
+        return service.receber(UUID.fromString(agenteId), corpo);
     }
 }

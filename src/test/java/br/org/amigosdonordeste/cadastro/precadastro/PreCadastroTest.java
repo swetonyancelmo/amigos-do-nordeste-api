@@ -33,7 +33,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *  - o mesmo id enviado duas vezes cria UM registro e a segunda responde
  *    JA_RECEBIDO com 200 — nunca erro, nunca familia repetida;
  *  - pessoa sem nome passa quando cadastroIncompleto e true, e so nesse caso;
- *  - idadeEstimada sem idadeEstimadaEm e recusada com 400;
+ *  - idadeEstimada e idadeEstimadaEm so entram juntos: um sem o outro e 400;
+ *  - o payload guardado e o JSON como chegou, inclusive campo que o servidor
+ *    ainda nao conhece;
  *  - o pre-cadastro fica amarrado a agente que enviou e a comunidade, quando
  *    o servidor a conhece.
  *
@@ -192,6 +194,43 @@ class PreCadastroTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").isString());
         assertEquals(0, preCadastros.count());
+    }
+
+    @Test
+    @DisplayName("idadeEstimadaEm sem idadeEstimada também é recusada com 400")
+    void idadeEstimadaEmSemIdade() throws Exception {
+        String pessoa = """
+            { "id": "%s", "nome": "Criança de Teste", "cadastroIncompleto": false,
+              "idadeEstimada": null, "idadeEstimadaEm": "2026-09-12" }
+            """.formatted(UUID.randomUUID());
+
+        mvc.perform(enviar(payload(UUID.randomUUID(), pessoa)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").isString());
+        assertEquals(0, preCadastros.count());
+    }
+
+    @Test
+    @DisplayName("campo que o servidor não conhece fica guardado no payload")
+    void campoDesconhecidoFicaNoPayload() throws Exception {
+        UUID id = UUID.randomUUID();
+        String corpo = payload(id, PESSOA_COMPLETA)
+            .replace("\"pontoReferencia\"", "\"campoNovoDoApp\": \"valor\", \"pontoReferencia\"");
+
+        mvc.perform(enviar(corpo)).andExpect(status().isOk());
+
+        JsonNode guardado = json.readTree(preCadastros.findById(id).orElseThrow().getPayload());
+        assertEquals("valor", guardado.get("campoNovoDoApp").asText());
+    }
+
+    @Test
+    @DisplayName("campo com formato errado é 400, não 500")
+    void formatoErradoE400() throws Exception {
+        String corpo = payload(UUID.randomUUID(), PESSOA_COMPLETA).replace("2026-09-12T09:12:00Z", "ontem");
+
+        mvc.perform(enviar(corpo))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").isString());
     }
 
     @Test
