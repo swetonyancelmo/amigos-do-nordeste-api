@@ -40,6 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *    possivel duplicata, mesmo com o numero formatado diferente;
  *  - nome igual com acento diferente ("Jose" x "José") tambem e apontado;
  *  - sem parecido nenhum, ou em outra comunidade, possivelDuplicata e null;
+ *  - aprovado nao aponta a propria familia como duplicata;
  *  - token de agente nao ve a fila.
  *
  * Dados ficticios — nenhum nome real entra em teste.
@@ -93,7 +94,7 @@ class PreCadastroListaTest {
         familiaExistente = familias.save(Familia.builder()
             .comunidade(comunidade)
             .responsavelNome("José de Teste")
-            .telefone("(87) 99999-0000")
+            .telefone("+55 (87) 9.9999-0000")
             .build());
     }
 
@@ -171,13 +172,26 @@ class PreCadastroListaTest {
     @Test
     @DisplayName("mesmo telefone na mesma comunidade é possível duplicata, mesmo formatado diferente")
     void duplicataPorTelefone() throws Exception {
-        salvar("Nome Bem Diferente", "87999990000", comunidade, 2, SituacaoPreCadastro.PENDENTE);
+        salvar("Nome Bem Diferente", "5587999990000", comunidade, 2, SituacaoPreCadastro.PENDENTE);
 
         mvc.perform(listar("?situacao=PENDENTE"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].possivelDuplicata.familiaId").value(familiaExistente.getId().toString()))
             .andExpect(jsonPath("$[0].possivelDuplicata.nome").value("José de Teste"))
             .andExpect(jsonPath("$[0].possivelDuplicata.motivo").value("TELEFONE_IGUAL"));
+    }
+
+    @Test
+    @DisplayName("aprovado não aponta a própria família como duplicata")
+    void aprovadoNaoApontaAPropriaFamilia() throws Exception {
+        PreCadastro aprovado = salvar("José de Teste", "87999990000", comunidade, 1, SituacaoPreCadastro.APROVADO);
+        aprovado.setFamilia(familiaExistente);
+        preCadastros.save(aprovado);
+
+        mvc.perform(listar("?situacao=APROVADO"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].possivelDuplicata", nullValue()));
     }
 
     @Test

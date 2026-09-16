@@ -34,22 +34,6 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
     List<Familia> findByComunidadeIdOrderByResponsavelNomeAsc(UUID comunidadeId);
 
     /**
-     * Deteccao de duplicata por telefone, dentro da comunidade. Ignora a
-     * formatacao: "(87) 99999-0000" e "87999990000" sao o mesmo numero. Quem
-     * chama ja manda o parametro so com digitos. E JPQL (replace e portavel)
-     * porque o regexp_replace do Postgres e o do H2 dos testes divergem.
-     */
-    @Query("""
-        select f from Familia f
-        where f.comunidade.id = :comunidadeId
-          and replace(replace(replace(replace(f.telefone, ' ', ''), '-', ''), '(', ''), ')', '')
-              = :telefoneSoDigitos
-        order by f.responsavelNome
-        """)
-    List<Familia> buscarPorTelefoneNaComunidade(@Param("comunidadeId") UUID comunidadeId,
-                                                @Param("telefoneSoDigitos") String telefoneSoDigitos);
-
-    /**
      * Deteccao de duplicata por nome, dentro da comunidade. unaccent (extensao
      * instalada na V1) porque o cadastro vem de papel: "Jose" tem que achar
      * "José". No perfil de teste o H2 recebe um alias UNACCENT feito em Java

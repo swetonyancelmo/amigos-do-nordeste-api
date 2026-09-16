@@ -129,22 +129,34 @@ public class PreCadastroService {
             preCadastro.getAgente().getNome(),
             preCadastro.getRecebidoEm(),
             preCadastro.getSituacao(),
-            comunidade != null ? procurarDuplicata(comunidade.getId(), responsavelNome, telefone) : null);
+            procurarDuplicata(preCadastro, responsavelNome, telefone));
     }
 
     /**
      * Duplicata e o risco numero um da coleta em campo: duas agentes, ou a
      * mesma em duas visitas, cadastrando a mesma familia. Procura dentro da
      * comunidade: primeiro por telefone (sinal mais forte), depois por nome
-     * sem acento e sem maiuscula. Sem comunidade reconhecida nao ha onde
-     * procurar, e a resposta e null. Nunca bloqueia — so avisa.
+     * sem acento e sem maiuscula. Nunca bloqueia — so avisa.
+     *
+     * So vale para PENDENTE: um aprovado ja virou familia e apontaria a si
+     * mesmo; um devolvido nao esta mais na fila. Sem comunidade reconhecida
+     * nao ha onde procurar. Nos dois casos a resposta e null.
      */
-    private PossivelDuplicata procurarDuplicata(UUID comunidadeId, String responsavelNome, String telefone) {
-        String soDigitos = telefone == null ? "" : telefone.replaceAll("\\D", "");
+    private PossivelDuplicata procurarDuplicata(PreCadastro preCadastro, String responsavelNome, String telefone) {
+        if (preCadastro.getSituacao() != SituacaoPreCadastro.PENDENTE || preCadastro.getComunidade() == null) {
+            return null;
+        }
+        UUID comunidadeId = preCadastro.getComunidade().getId();
+
+        // Telefone comparado so pelos digitos, dos dois lados: o cadastrado
+        // pode estar como "(87) 99999-0000", "87.99999.0000" ou "+5587...".
+        // Feito em Java porque o regexp_replace do Postgres e o do H2 divergem.
+        String soDigitos = soDigitos(telefone);
         if (!soDigitos.isEmpty()) {
-            List<Familia> porTelefone = familias.buscarPorTelefoneNaComunidade(comunidadeId, soDigitos);
-            if (!porTelefone.isEmpty()) {
-                return duplicata(porTelefone.get(0), MotivoDuplicata.TELEFONE_IGUAL);
+            for (Familia familia : familias.findByComunidadeIdOrderByResponsavelNomeAsc(comunidadeId)) {
+                if (soDigitos.equals(soDigitos(familia.getTelefone()))) {
+                    return duplicata(familia, MotivoDuplicata.TELEFONE_IGUAL);
+                }
             }
         }
         if (responsavelNome != null && !responsavelNome.isBlank()) {
@@ -154,6 +166,10 @@ public class PreCadastroService {
             }
         }
         return null;
+    }
+
+    private static String soDigitos(String telefone) {
+        return telefone == null ? "" : telefone.replaceAll("\\D", "");
     }
 
     private static PossivelDuplicata duplicata(Familia familia, MotivoDuplicata motivo) {
