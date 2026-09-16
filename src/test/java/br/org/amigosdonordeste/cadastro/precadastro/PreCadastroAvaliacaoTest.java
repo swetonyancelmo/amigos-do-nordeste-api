@@ -276,6 +276,22 @@ class PreCadastroAvaliacaoTest {
     }
 
     @Test
+    @DisplayName("null dentro de pessoas[] ou fontesRenda[] é 400, não 500")
+    void nullNasListasE400() throws Exception {
+        PreCadastro pendente = salvarPendente(comunidade);
+
+        mvc.perform(aprovar(pendente.getId(), "{ \"pessoas\": [ null ] }"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").isString());
+        mvc.perform(aprovar(pendente.getId(), "{ \"fontesRenda\": [ null ] }"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").isString());
+
+        assertEquals(0, familias.count());
+        assertEquals(SituacaoPreCadastro.PENDENTE, preCadastros.findById(pendente.getId()).orElseThrow().getSituacao());
+    }
+
+    @Test
     @DisplayName("sem comunidade reconhecida, aprovar exige comunidadeId no corpo")
     void semComunidadeExigeComunidadeNoCorpo() throws Exception {
         PreCadastro pendente = salvarPendente(null);

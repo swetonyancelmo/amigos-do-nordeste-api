@@ -42,10 +42,10 @@ public record AprovarPreCadastroRequisicao(
     Set<AbastecimentoAgua> abastecimentoAgua,
 
     @Schema(description = "pessoaIndice é a posição na lista de pessoas do payload original, como no POST /api/familias")
-    @Valid List<CriarFonteRenda> fontesRenda,
+    @Valid List<@NotNull CriarFonteRenda> fontesRenda,
 
     @Schema(description = "Complementos por pessoa, referenciadas pela posição no payload original")
-    @Valid List<ComplementoPessoa> pessoas,
+    @Valid List<@NotNull ComplementoPessoa> pessoas,
 
     String observacoes
 ) {
