@@ -1,10 +1,15 @@
 package br.org.amigosdonordeste.cadastro.precadastro;
 
 import br.org.amigosdonordeste.cadastro.agente.AgenteRepositorio;
+import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
+import br.org.amigosdonordeste.cadastro.familia.Familia;
+import br.org.amigosdonordeste.cadastro.familia.FamiliaRepositorio;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroRequisicao;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroRequisicao.PessoaPreCadastro;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroResposta;
+import br.org.amigosdonordeste.cadastro.precadastro.dto.PossivelDuplicata;
+import br.org.amigosdonordeste.cadastro.precadastro.dto.PreCadastroResumoResposta;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.ResultadoEnvio;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,20 +17,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Validator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Recebe o pre-cadastro do aparelho da agente.
+ * Recebe o pre-cadastro do aparelho da agente e lista a fila para o painel.
  *
- * A regra central: o mesmo id nunca grava duas vezes e nunca devolve erro.
+ * A regra central do recebimento: o mesmo id nunca grava duas vezes e nunca devolve erro.
  * Primeiro se pergunta ao banco se o id ja existe (o caso comum do reenvio);
  * se dois envios do mesmo id chegarem ao mesmo tempo e os dois passarem por
  * essa pergunta, a chave primaria segura o segundo INSERT e ele tambem vira
  * JA_RECEBIDO. E por isso que este service NAO e @Transactional: o INSERT
  * roda na transacao do repositorio e, se ela falhar por chave duplicada, nao
- * ha transacao de fora marcada para rollback.
+ * ha transacao de fora marcada para rollback. (A listagem, que so le, abre
+ * a sua propria transacao readOnly.)
  */
 @Service
 public class PreCadastroService {
@@ -33,17 +41,20 @@ public class PreCadastroService {
     private final PreCadastroRepositorio preCadastros;
     private final AgenteRepositorio agentes;
     private final ComunidadeRepositorio comunidades;
+    private final FamiliaRepositorio familias;
     private final ObjectMapper json;
     private final Validator validador;
 
     public PreCadastroService(PreCadastroRepositorio preCadastros,
                               AgenteRepositorio agentes,
                               ComunidadeRepositorio comunidades,
+                              FamiliaRepositorio familias,
                               ObjectMapper json,
                               Validator validador) {
         this.preCadastros = preCadastros;
         this.agentes = agentes;
         this.comunidades = comunidades;
+        this.familias = familias;
         this.json = json;
         this.validador = validador;
     }
@@ -83,6 +94,84 @@ public class PreCadastroService {
         }
 
         return new EnviarPreCadastroResposta(requisicao.id(), ResultadoEnvio.ACEITO);
+    }
+
+    /**
+     * Lista da tela de Chamados. Tudo que a linha mostra sai do payload
+     * guardado (nome, telefone, pessoas) ou das relacoes (agente, comunidade);
+     * o total de pessoas e contado, nao lido de coluna.
+     *
+     * @param situacao filtro; nula lista todas as situacoes.
+     */
+    @Transactional(readOnly = true)
+    public List<PreCadastroResumoResposta> listar(SituacaoPreCadastro situacao) {
+        List<PreCadastro> fila = situacao == null
+            ? preCadastros.listarTodos()
+            : preCadastros.listarPorSituacao(situacao);
+        return fila.stream().map(this::resumir).toList();
+    }
+
+    private PreCadastroResumoResposta resumir(PreCadastro preCadastro) {
+        JsonNode payload = lerPayload(preCadastro);
+        String responsavelNome = texto(payload, "responsavelNome");
+        String telefone = texto(payload, "telefone");
+        JsonNode pessoas = payload.path("pessoas");
+
+        Comunidade comunidade = preCadastro.getComunidade();
+        String comunidadeNome = comunidade != null ? comunidade.getNome() : texto(payload, "comunidadeNome");
+
+        return new PreCadastroResumoResposta(
+            preCadastro.getId(),
+            responsavelNome,
+            comunidade != null ? comunidade.getId() : null,
+            comunidadeNome,
+            pessoas.isArray() ? pessoas.size() : 0,
+            preCadastro.getAgente().getNome(),
+            preCadastro.getRecebidoEm(),
+            preCadastro.getSituacao(),
+            comunidade != null ? procurarDuplicata(comunidade.getId(), responsavelNome, telefone) : null);
+    }
+
+    /**
+     * Duplicata e o risco numero um da coleta em campo: duas agentes, ou a
+     * mesma em duas visitas, cadastrando a mesma familia. Procura dentro da
+     * comunidade: primeiro por telefone (sinal mais forte), depois por nome
+     * sem acento e sem maiuscula. Sem comunidade reconhecida nao ha onde
+     * procurar, e a resposta e null. Nunca bloqueia — so avisa.
+     */
+    private PossivelDuplicata procurarDuplicata(UUID comunidadeId, String responsavelNome, String telefone) {
+        String soDigitos = telefone == null ? "" : telefone.replaceAll("\\D", "");
+        if (!soDigitos.isEmpty()) {
+            List<Familia> porTelefone = familias.buscarPorTelefoneNaComunidade(comunidadeId, soDigitos);
+            if (!porTelefone.isEmpty()) {
+                return duplicata(porTelefone.get(0), MotivoDuplicata.TELEFONE_IGUAL);
+            }
+        }
+        if (responsavelNome != null && !responsavelNome.isBlank()) {
+            List<Familia> porNome = familias.buscarPorNomeParecidoNaComunidade(comunidadeId, responsavelNome);
+            if (!porNome.isEmpty()) {
+                return duplicata(porNome.get(0), MotivoDuplicata.NOME_PARECIDO);
+            }
+        }
+        return null;
+    }
+
+    private static PossivelDuplicata duplicata(Familia familia, MotivoDuplicata motivo) {
+        return new PossivelDuplicata(familia.getId(), familia.getResponsavelNome(), motivo);
+    }
+
+    private JsonNode lerPayload(PreCadastro preCadastro) {
+        try {
+            return json.readTree(preCadastro.getPayload());
+        } catch (JsonProcessingException e) {
+            // O payload foi validado ao entrar; se nao for JSON agora, o banco foi editado na mao.
+            throw new IllegalStateException("Payload do pré-cadastro " + preCadastro.getId() + " não é JSON.", e);
+        }
+    }
+
+    private static String texto(JsonNode no, String campo) {
+        JsonNode valor = no.get(campo);
+        return valor == null || valor.isNull() ? null : valor.asText();
     }
 
     /**

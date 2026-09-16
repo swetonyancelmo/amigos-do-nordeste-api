@@ -2,7 +2,10 @@ spring:
   flyway:
     enabled: false
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    # O H2 nao tem a extensao unaccent do Postgres (V1). O INIT cria um alias
+    # UNACCENT em Java (classe de teste) para as consultas nativas de duplicata
+    # rodarem aqui com o mesmo SQL de producao.
+    url: "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;INIT=CREATE ALIAS IF NOT EXISTS UNACCENT FOR 'br.org.amigosdonordeste.cadastro.suporte.UnaccentH2.unaccent'"
     driver-class-name: org.h2.Driver
     username: sa
     password:
