@@ -5,6 +5,14 @@ import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
 import br.org.amigosdonordeste.cadastro.familia.Familia;
 import br.org.amigosdonordeste.cadastro.familia.FamiliaRepositorio;
+import br.org.amigosdonordeste.cadastro.familia.FamiliaResponse;
+import br.org.amigosdonordeste.cadastro.familia.FamiliaService;
+import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
+import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao;
+import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao.CriarPessoa;
+import br.org.amigosdonordeste.cadastro.precadastro.dto.AprovarPreCadastroRequisicao;
+import br.org.amigosdonordeste.cadastro.precadastro.dto.AprovarPreCadastroRequisicao.ComplementoPessoa;
+import br.org.amigosdonordeste.cadastro.precadastro.dto.DevolverPreCadastroRequisicao;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroRequisicao;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroRequisicao.PessoaPreCadastro;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroResposta;
@@ -19,12 +27,17 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * Recebe o pre-cadastro do aparelho da agente e lista a fila para o painel.
+ * Recebe o pre-cadastro do aparelho da agente; lista, aprova e devolve a
+ * fila para o painel.
  *
  * A regra central do recebimento: o mesmo id nunca grava duas vezes e nunca devolve erro.
  * Primeiro se pergunta ao banco se o id ja existe (o caso comum do reenvio);
@@ -32,8 +45,8 @@ import java.util.UUID;
  * essa pergunta, a chave primaria segura o segundo INSERT e ele tambem vira
  * JA_RECEBIDO. E por isso que este service NAO e @Transactional: o INSERT
  * roda na transacao do repositorio e, se ela falhar por chave duplicada, nao
- * ha transacao de fora marcada para rollback. (A listagem, que so le, abre
- * a sua propria transacao readOnly.)
+ * ha transacao de fora marcada para rollback. Os outros metodos abrem a
+ * propria transacao.
  */
 @Service
 public class PreCadastroService {
@@ -42,6 +55,7 @@ public class PreCadastroService {
     private final AgenteRepositorio agentes;
     private final ComunidadeRepositorio comunidades;
     private final FamiliaRepositorio familias;
+    private final FamiliaService familiaService;
     private final ObjectMapper json;
     private final Validator validador;
 
@@ -49,12 +63,14 @@ public class PreCadastroService {
                               AgenteRepositorio agentes,
                               ComunidadeRepositorio comunidades,
                               FamiliaRepositorio familias,
+                              FamiliaService familiaService,
                               ObjectMapper json,
                               Validator validador) {
         this.preCadastros = preCadastros;
         this.agentes = agentes;
         this.comunidades = comunidades;
         this.familias = familias;
+        this.familiaService = familiaService;
         this.json = json;
         this.validador = validador;
     }
@@ -188,6 +204,118 @@ public class PreCadastroService {
     private static String texto(JsonNode no, String campo) {
         JsonNode valor = no.get(campo);
         return valor == null || valor.isNull() ? null : valor.asText();
+    }
+
+    /**
+     * Aprovar = criar a familia pelo MESMO caminho do POST /api/familias
+     * (FamiliaService.criar). Nao ha uma segunda definicao de familia valida
+     * aqui: este metodo so monta a CriarFamiliaRequisicao juntando o que a
+     * agente coletou (payload) com o que a revisora completou (corpo).
+     *
+     * Aprovar duas vezes nao cria duas familias: a linha e lida com lock e
+     * so PENDENTE passa; a segunda chamada ve APROVADO e recebe 409.
+     */
+    @Transactional
+    public FamiliaResponse aprovar(UUID id, AprovarPreCadastroRequisicao complemento) {
+        PreCadastro preCadastro = buscarPendente(id);
+        EnviarPreCadastroRequisicao coletado = converter(lerPayload(preCadastro));
+
+        UUID comunidadeId = complemento.comunidadeId() != null
+            ? complemento.comunidadeId()
+            : preCadastro.getComunidade() != null ? preCadastro.getComunidade().getId() : null;
+        if (comunidadeId == null) {
+            throw new PreCadastroInvalidoException(
+                "comunidadeId: o servidor não reconheceu a comunidade do envio; informe uma para aprovar.");
+        }
+
+        Map<Integer, ComplementoPessoa> complementos = indexarComplementos(
+            complemento.pessoas(), coletado.pessoas().size());
+
+        List<CriarPessoa> pessoas = new ArrayList<>();
+        for (int i = 0; i < coletado.pessoas().size(); i++) {
+            pessoas.add(juntarPessoa(coletado.pessoas().get(i), complementos.get(i)));
+        }
+
+        CriarFamiliaRequisicao requisicao = new CriarFamiliaRequisicao(
+            comunidadeId,
+            coletado.responsavelNome(),
+            complemento.responsavelCpf(),
+            coletado.telefone(),
+            coletado.pontoReferencia(),
+            complemento.temBanheiro(),
+            complemento.escoamentoSanitario(),
+            complemento.tratamentoAgua(),
+            complemento.abastecimentoAgua(),
+            pessoas,
+            complemento.fontesRenda() == null ? List.of() : complemento.fontesRenda(),
+            complemento.observacoes());
+
+        FamiliaResponse familia = familiaService.criar(requisicao);
+
+        preCadastro.setFamilia(familias.getReferenceById(familia.id()));
+        preCadastro.setSituacao(SituacaoPreCadastro.APROVADO);
+        preCadastro.setAvaliadoEm(OffsetDateTime.now());
+        return familia;
+    }
+
+    /** Devolver = mandar de volta para a agente com o motivo. O motivo e obrigatorio (Bean Validation no DTO). */
+    @Transactional
+    public void devolver(UUID id, DevolverPreCadastroRequisicao requisicao) {
+        PreCadastro preCadastro = buscarPendente(id);
+        preCadastro.setSituacao(SituacaoPreCadastro.DEVOLVIDO);
+        preCadastro.setMotivoDevolucao(requisicao.motivo().trim());
+        preCadastro.setAvaliadoEm(OffsetDateTime.now());
+    }
+
+    private PreCadastro buscarPendente(UUID id) {
+        PreCadastro preCadastro = preCadastros.buscarParaAvaliar(id)
+            .orElseThrow(() -> new PreCadastroNaoEncontradoException(id));
+        if (preCadastro.getSituacao() != SituacaoPreCadastro.PENDENTE) {
+            throw new PreCadastroJaAvaliadoException(preCadastro.getSituacao());
+        }
+        return preCadastro;
+    }
+
+    /**
+     * indice e posicao em pessoas[] do payload original. Fora da faixa ou
+     * repetido e 400 — ignorar em silencio deixaria a pessoa sem tamanho de
+     * roupa e a familia fora do relatorio de necessidades sem ninguem saber.
+     */
+    private static Map<Integer, ComplementoPessoa> indexarComplementos(List<ComplementoPessoa> lista, int totalPessoas) {
+        Map<Integer, ComplementoPessoa> porIndice = new HashMap<>();
+        if (lista == null) {
+            return porIndice;
+        }
+        for (ComplementoPessoa c : lista) {
+            if (c.indice() < 0 || c.indice() >= totalPessoas) {
+                throw new PessoaReferenciadaInvalidaException("pessoas.indice", c.indice(), totalPessoas);
+            }
+            if (porIndice.put(c.indice(), c) != null) {
+                throw new PreCadastroInvalidoException("pessoas: indice " + c.indice() + " aparece mais de uma vez.");
+            }
+        }
+        return porIndice;
+    }
+
+    /** O que a agente coletou + o que a revisora completou = a pessoa do POST /api/familias. */
+    private static CriarPessoa juntarPessoa(PessoaPreCadastro coletada, ComplementoPessoa complemento) {
+        ComplementoPessoa c = complemento != null
+            ? complemento
+            : new ComplementoPessoa(0, null, null, null, null, null, null);
+        return new CriarPessoa(
+            coletada.nome(),
+            coletada.cadastroIncompleto(),
+            coletada.sexo(),
+            coletada.dataNascimento(),
+            coletada.idadeEstimada(),
+            coletada.idadeEstimadaEm(),
+            c.parentesco(),
+            c.estuda(),
+            c.serie(),
+            c.tamanhoRoupa(),
+            c.numeroCalcado(),
+            c.gestante(),
+            null);
     }
 
     /**

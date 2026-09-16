@@ -11,6 +11,11 @@ public class PessoaReferenciadaInvalidaException extends RuntimeException {
 
     /** POST: pessoaIndice fora de pessoas[]. */
     public PessoaReferenciadaInvalidaException(int pessoaIndice, int totalPessoas) {
-        super("fontesRenda.pessoaIndice " + pessoaIndice + " está fora de pessoas[] (tamanho " + totalPessoas + ").");
+        this("fontesRenda.pessoaIndice", pessoaIndice, totalPessoas);
+    }
+
+    /** Qualquer campo que aponte para uma posição em pessoas[] (ex.: pessoas.indice na aprovação do pré-cadastro). */
+    public PessoaReferenciadaInvalidaException(String campo, int indice, int totalPessoas) {
+        super(campo + " " + indice + " está fora de pessoas[] (tamanho " + totalPessoas + ").");
     }
 }
