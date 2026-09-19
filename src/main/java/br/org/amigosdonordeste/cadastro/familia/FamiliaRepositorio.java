@@ -20,9 +20,17 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
      * das tres colecoes juntas vira produto cartesiano (linhas =
      * |pessoas| x |fontesRenda| x |abastecimentoAgua|) so pra montar uma
      * familia. Preferimos as duas consultas extras, pequenas e por familia_id.
+     *
+     * O "distinct" aqui nao e sobre colunas: com join fetch de pessoas, uma
+     * familia com N membros vira N linhas no ResultSet. Sem distinct,
+     * getSingleResult() (usado pelo Spring Data pra métodos que devolvem
+     * Optional<T>) ve mais de uma linha e explode com
+     * IncorrectResultSizeDataAccessException — 500 em vez de 200/404. O
+     * Hibernate colapsa essas linhas de volta pra uma unica Familia antes
+     * da checagem de tamanho.
      */
     @Query("""
-        select f from Familia f
+        select distinct f from Familia f
         join fetch f.comunidade c
         join fetch c.municipio
         left join fetch f.pessoas
