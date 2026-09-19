@@ -5,9 +5,27 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
+
+    /**
+     * Issue #17: a ficha completa que a tela de edicao carrega. Uma consulta
+     * so, com join fetch de comunidade, municipio, membros, fontes de renda e
+     * abastecimento — sem isso seria um SELECT por colecao a cada abertura da
+     * ficha (N+1).
+     */
+    @Query("""
+        select f from Familia f
+        join fetch f.comunidade c
+        join fetch c.municipio
+        left join fetch f.pessoas
+        left join fetch f.fontesRenda
+        left join fetch f.abastecimentoAgua
+        where f.id = :id
+        """)
+    Optional<Familia> buscarDetalhePorId(@Param("id") UUID id);
 
     /**
      * RF-02: busca pelo nome da responsavel. join fetch de comunidade e

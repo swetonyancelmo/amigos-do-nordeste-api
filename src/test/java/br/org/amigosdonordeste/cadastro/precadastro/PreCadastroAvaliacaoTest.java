@@ -201,7 +201,7 @@ class PreCadastroAvaliacaoTest {
             assertEquals(familiaId, preCadastros.findById(pendente.getId()).orElseThrow().getFamilia().getId());
             assertEquals(EscoamentoSanitario.FOSSA_RUDIMENTAR, familia.getEscoamentoSanitario());
             assertTrue(familia.getAbastecimentoAgua().contains(AbastecimentoAgua.CISTERNA));
-            assertEquals(TipoFonteRenda.BOLSA_FAMILIA, familia.getFontesRenda().get(0).getTipo());
+            assertEquals(TipoFonteRenda.BOLSA_FAMILIA, familia.getFontesRenda().iterator().next().getTipo());
 
             // Pessoas: o coletado (nome, sexo, idade) e o complemento (roupa, calcado...) juntos.
             List<Pessoa> pessoas = familia.getPessoas().stream()
