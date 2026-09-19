@@ -44,6 +44,17 @@ public class FamiliaService {
         this.comunidadeRepositorio = comunidadeRepositorio;
     }
 
+    /**
+     * Issue #17: a ficha completa da tela de edicao. readOnly porque aqui so
+     * se le — evita que o Hibernate faca dirty checking do grafo inteiro.
+     */
+    @Transactional(readOnly = true)
+    public FamiliaDetalheResponse buscarPorId(UUID id) {
+        Familia familia = familiaRepositorio.buscarDetalhePorId(id)
+                .orElseThrow(() -> new FamiliaNaoEncontradaException(id));
+        return FamiliaDetalheResponse.fromEntity(familia);
+    }
+
     /** Issue #14 */
     public FamiliaResponse criar(CriarFamiliaRequisicao request) {
         Familia familia = new Familia();

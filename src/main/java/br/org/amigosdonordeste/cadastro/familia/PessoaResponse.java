@@ -8,6 +8,7 @@ import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public record PessoaResponse(
@@ -51,5 +52,10 @@ public record PessoaResponse(
                 pessoa.getGestante(),
                 pessoa.getObservacoes()
         );
+    }
+
+    /** Regra de "quantos estudam" — usada tanto no POST/PUT quanto na ficha completa. */
+    public static long contarEstudando(List<PessoaResponse> pessoas) {
+        return pessoas.stream().filter(p -> Boolean.TRUE.equals(p.estuda())).count();
     }
 }
