@@ -11,18 +11,21 @@ import java.util.UUID;
 public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
 
     /**
-     * Issue #17: a ficha completa que a tela de edicao carrega. Uma consulta
-     * so, com join fetch de comunidade, municipio, membros, fontes de renda e
-     * abastecimento — sem isso seria um SELECT por colecao a cada abertura da
-     * ficha (N+1).
+     * Issue #17: a ficha completa que a tela de edicao carrega. Join fetch de
+     * comunidade, municipio e pessoas (a colecao que mais importa nao
+     * duplicar/nao fazer N+1). fontesRenda e abastecimentoAgua carregam lazy,
+     * dentro da mesma transacao do service — nao dá pra fazer join fetch dos
+     * dois ao mesmo tempo que pessoas: duas colecoes List no mesmo join
+     * (MultipleBagFetchException) so se resolveria virando Set, e aí o join
+     * das tres colecoes juntas vira produto cartesiano (linhas =
+     * |pessoas| x |fontesRenda| x |abastecimentoAgua|) so pra montar uma
+     * familia. Preferimos as duas consultas extras, pequenas e por familia_id.
      */
     @Query("""
         select f from Familia f
         join fetch f.comunidade c
         join fetch c.municipio
         left join fetch f.pessoas
-        left join fetch f.fontesRenda
-        left join fetch f.abastecimentoAgua
         where f.id = :id
         """)
     Optional<Familia> buscarDetalhePorId(@Param("id") UUID id);

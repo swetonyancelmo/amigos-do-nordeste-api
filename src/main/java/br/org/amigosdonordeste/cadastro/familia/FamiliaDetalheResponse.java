@@ -89,24 +89,25 @@ public record FamiliaDetalheResponse(
         int de13a59 = 0;
         int de60ouMais = 0;
         int semIdade = 0;
-        int estudando = 0;
 
         for (PessoaResponse pessoa : pessoas) {
             FaixaEtaria faixa = FaixaEtaria.de(pessoa.idade());
             if (faixa == null) {
                 semIdade++;
-            } else {
-                switch (faixa) {
-                    case ATE_12 -> ate12++;
-                    case DE_13_A_59 -> de13a59++;
-                    case DE_60_OU_MAIS -> de60ouMais++;
-                }
+                continue;
             }
-            if (Boolean.TRUE.equals(pessoa.estuda())) {
-                estudando++;
+            switch (faixa) {
+                case ATE_12 -> ate12++;
+                case DE_13_A_59 -> de13a59++;
+                case DE_60_OU_MAIS -> de60ouMais++;
+                // se uma faixa nova for adicionada ao enum, falha alto aqui em
+                // vez de subcontar em silencio nos totais
+                default -> throw new IllegalStateException("Faixa etária sem contagem: " + faixa);
             }
         }
 
-        return new Totais(pessoas.size(), ate12, de13a59, de60ouMais, semIdade, estudando, fontes.size());
+        long estudando = PessoaResponse.contarEstudando(pessoas);
+
+        return new Totais(pessoas.size(), ate12, de13a59, de60ouMais, semIdade, (int) estudando, fontes.size());
     }
 }

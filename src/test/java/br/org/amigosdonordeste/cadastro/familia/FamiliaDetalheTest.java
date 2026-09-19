@@ -45,8 +45,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *  - a ficha vem inteira: comunidade, municipio, membros e fontes de renda;
  *  - os totais sao contados na hora, inclusive por faixa etaria;
  *  - id inexistente e 404 com mensagem em portugues, nao 500;
- *  - a ficha sai de uma consulta so, sem colecao preguicosa e sem duplicar
- *    membro nem fonte por causa do join;
+ *  - comunidade, municipio e pessoas vem eager numa consulta so (a colecao
+ *    que mais pesaria em N+1); fontesRenda e abastecimentoAgua carregam lazy
+ *    dentro da mesma transacao do service, sem produto cartesiano;
  *  - nada fora do DTO vaza no corpo — em especial senha_hash.
  *
  * Dados ficticios — nenhum nome real entra em teste.
@@ -162,19 +163,14 @@ class FamiliaDetalheTest {
     }
 
     @Test
-    @DisplayName("a ficha inteira sai de uma consulta só")
-    void carregaTudoNumaConsultaSo() {
+    @DisplayName("comunidade, município e pessoas vêm eager, sem N+1")
+    void carregaComunidadeMunicipioEPessoasEager() {
         Familia carregada = familias.buscarDetalhePorId(familia.getId()).orElseThrow();
 
         assertTrue(Hibernate.isInitialized(carregada.getComunidade()), "comunidade");
         assertTrue(Hibernate.isInitialized(carregada.getComunidade().getMunicipio()), "município");
         assertTrue(Hibernate.isInitialized(carregada.getPessoas()), "pessoas");
-        assertTrue(Hibernate.isInitialized(carregada.getFontesRenda()), "fontes de renda");
-        assertTrue(Hibernate.isInitialized(carregada.getAbastecimentoAgua()), "abastecimento");
-
-        // o produto cartesiano do join nao pode duplicar membro nem fonte
         assertEquals(4, carregada.getPessoas().size());
-        assertEquals(2, carregada.getFontesRenda().size());
     }
 
     @Test

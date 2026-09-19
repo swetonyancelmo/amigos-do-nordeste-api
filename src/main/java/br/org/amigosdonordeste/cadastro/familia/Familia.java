@@ -15,7 +15,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -71,22 +73,15 @@ public class Familia {
     @Builder.Default
     private Set<AbastecimentoAgua> abastecimentoAgua = new LinkedHashSet<>();
 
-    // Set, e nao List, de proposito: a ficha completa (issue #17) faz join
-    // fetch das duas colecoes na mesma consulta, e o Hibernate recusa fazer
-    // isso com dois "bags" (MultipleBagFetchException). Como Set, o produto
-    // cartesiano do join nao duplica ninguem. O @OrderBy da a ordem estavel
-    // que a List dava de graca.
     @OneToMany(mappedBy = "familia", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("nome")
     @Setter(AccessLevel.NONE)
     @Builder.Default
-    private Set<Pessoa> pessoas = new LinkedHashSet<>();
+    private List<Pessoa> pessoas = new ArrayList<>();
 
     @OneToMany(mappedBy = "familia", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("tipo")
     @Setter(AccessLevel.NONE)
     @Builder.Default
-    private Set<FonteRenda> fontesRenda = new LinkedHashSet<>();
+    private List<FonteRenda> fontesRenda = new ArrayList<>();
 
     @Column(columnDefinition = "text")
     private String observacoes;

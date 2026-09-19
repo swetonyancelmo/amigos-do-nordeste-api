@@ -37,7 +37,7 @@ public record FamiliaResponse(
                 .map(FonteRendaResponse::fromEntity)
                 .toList();
 
-        long estudando = pessoas.stream().filter(p -> Boolean.TRUE.equals(p.estuda())).count();
+        long estudando = PessoaResponse.contarEstudando(pessoas);
 
         return new FamiliaResponse(
                 familia.getId(),
