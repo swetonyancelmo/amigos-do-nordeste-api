@@ -76,4 +76,17 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
         """, nativeQuery = true)
     List<Familia> buscarPorNomeParecidoNaComunidade(@Param("comunidadeId") UUID comunidadeId,
                                                     @Param("nome") String nome);
+
+    /**
+     * Issue #18: total de famílias no escopo do relatório de necessidades.
+     * comunidadeId e municipioId são opcionais — sem os dois, conta todas.
+     */
+    @Query("""
+        select count(f) from Familia f
+        join f.comunidade c
+        where (:comunidadeId is null or c.id = :comunidadeId)
+          and (:municipioId is null or c.municipio.id = :municipioId)
+        """)
+    long contarParaRelatorioNecessidades(@Param("comunidadeId") UUID comunidadeId,
+                                        @Param("municipioId") UUID municipioId);
 }
