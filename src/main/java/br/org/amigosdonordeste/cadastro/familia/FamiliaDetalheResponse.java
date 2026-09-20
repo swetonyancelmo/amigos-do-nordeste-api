@@ -7,6 +7,7 @@ import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.FaixaEtaria;
 
 import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -64,6 +65,13 @@ public record FamiliaDetalheResponse(
                 .map(FonteRendaResponse::fromEntity)
                 .toList();
 
+        // copia, nao a colecao da entidade: abastecimentoAgua e lazy e so o
+        // Jackson a leria — ja fora da transacao do service, o que estoura
+        // LazyInitializationException na serializacao (500). Copiar aqui
+        // inicializa dentro da transacao e mantem a regra 9 (a resposta nao
+        // carrega nada da entidade).
+        Set<AbastecimentoAgua> abastecimento = new LinkedHashSet<>(familia.getAbastecimentoAgua());
+
         return new FamiliaDetalheResponse(
                 familia.getId(),
                 ComunidadeResponse.fromEntity(familia.getComunidade()),
@@ -74,7 +82,7 @@ public record FamiliaDetalheResponse(
                 familia.getTemBanheiro(),
                 familia.getEscoamentoSanitario(),
                 familia.getTratamentoAgua(),
-                familia.getAbastecimentoAgua(),
+                abastecimento,
                 pessoas,
                 fontes,
                 familia.getObservacoes(),
