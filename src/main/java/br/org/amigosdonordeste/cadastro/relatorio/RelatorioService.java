@@ -56,7 +56,10 @@ public class RelatorioService {
                 pessoas.size(),
                 totalCriancasAte12,
                 contarRoupa(pessoasContadas),
-                contarCalcado(pessoasContadas));
+                contarCalcado(pessoasContadas),
+                pessoasContadas.stream().filter(p -> p.tamanhoRoupa() == null).count(),
+                pessoasContadas.stream().filter(p -> p.numeroCalcado() == null).count(),
+                pessoas.stream().filter(p -> p.idade() == null).count());
     }
 
     private static boolean ateDozeAnos(PessoaResponse pessoa) {

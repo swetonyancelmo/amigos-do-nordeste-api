@@ -12,9 +12,17 @@ public record NecessidadesResponse(
         long totalPessoas,
         long totalCriancasAte12,
         List<ItemContagem> roupa,
-        List<ItemContagem> calcado
+        List<ItemContagem> calcado,
+        // Quem entrou na contagem mas não tem tamanho/calçado preenchido
+        // (ex.: família vinda do app da ACS). Nunca é somado a uma faixa, e
+        // sai no JSON mesmo quando é zero — para ninguém comprar a menos sem ver.
+        long semTamanhoInformado,
+        long semCalcadoInformado,
+        // Pessoas no escopo sem data de nascimento nem idade estimada. Com
+        // todasIdades=false elas não entram na roupa/calçado, porque não dá
+        // para saber se têm até 12 anos.
+        long semIdadeInformada
 ) {
-
 
     public record ItemContagem(String chave, long quantidade) {
     }

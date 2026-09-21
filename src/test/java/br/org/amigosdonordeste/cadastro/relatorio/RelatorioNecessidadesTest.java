@@ -91,10 +91,12 @@ class RelatorioNecessidadesTest {
         familiaA2.adicionarPessoa(pessoa(40, TamanhoRoupa.ADULTO_G, "38/39"));
         familias.save(familiaA2);
 
-        // Sítio B1 (outro município): fronteira dos 12 anos, um de 13 e um sem idade nenhuma
+        // Sítio B1 (outro município): fronteira dos 12 anos, um de 13, uma criança
+        // sem tamanho de roupa (veio do app da ACS) e um sem idade nenhuma
         Familia familiaB1 = Familia.builder().comunidade(comunidadeB1).responsavelNome("Responsável B1").build();
         familiaB1.adicionarPessoa(pessoa(12, TamanhoRoupa.ADULTO_PP, "28/29"));
         familiaB1.adicionarPessoa(pessoa(13, TamanhoRoupa.ADULTO_P, "30/31"));
+        familiaB1.adicionarPessoa(pessoa(7, null, "26/27"));
         familiaB1.adicionarPessoa(pessoaSemIdade(TamanhoRoupa.ADULTO_M));
         familias.save(familiaB1);
     }
@@ -122,8 +124,8 @@ class RelatorioNecessidadesTest {
         mvc.perform(get("/api/relatorios/necessidades").header("Authorization", bearerAdmin))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.totalFamilias").value(3))
-            .andExpect(jsonPath("$.totalPessoas").value(8))
-            .andExpect(jsonPath("$.totalCriancasAte12").value(4))
+            .andExpect(jsonPath("$.totalPessoas").value(9))
+            .andExpect(jsonPath("$.totalCriancasAte12").value(5))
             // ordem do enum (Infantil antes de Adulto), não alfabética:
             // alfabeticamente "ADULTO_PP" viria antes de "INFANTIL_4"
             .andExpect(jsonPath("$.roupa", hasSize(3)))
@@ -133,10 +135,17 @@ class RelatorioNecessidadesTest {
             .andExpect(jsonPath("$.roupa[1].quantidade").value(1))
             .andExpect(jsonPath("$.roupa[2].chave").value("ADULTO_PP"))
             .andExpect(jsonPath("$.roupa[2].quantidade").value(1))
-            .andExpect(jsonPath("$.calcado", hasSize(3)))
+            .andExpect(jsonPath("$.calcado", hasSize(4)))
             .andExpect(jsonPath("$.calcado[0].chave").value("20/21"))
             .andExpect(jsonPath("$.calcado[1].chave").value("24/25"))
-            .andExpect(jsonPath("$.calcado[2].chave").value("28/29"));
+            .andExpect(jsonPath("$.calcado[2].chave").value("26/27"))
+            .andExpect(jsonPath("$.calcado[3].chave").value("28/29"))
+            // a criança de 7 anos sem tamanho não entra em faixa nenhuma (roupa
+            // continua com 3 faixas somando 4); a de 8 anos está sem calçado
+            .andExpect(jsonPath("$.semTamanhoInformado").value(1))
+            .andExpect(jsonPath("$.semCalcadoInformado").value(1))
+            // a pessoa sem idade fica fora da roupa/calçado, mas aparece aqui
+            .andExpect(jsonPath("$.semIdadeInformada").value(1));
     }
 
     @Test
@@ -145,8 +154,8 @@ class RelatorioNecessidadesTest {
         mvc.perform(get("/api/relatorios/necessidades").param("todasIdades", "true")
                 .header("Authorization", bearerAdmin))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.totalPessoas").value(8))
-            .andExpect(jsonPath("$.totalCriancasAte12").value(4))
+            .andExpect(jsonPath("$.totalPessoas").value(9))
+            .andExpect(jsonPath("$.totalCriancasAte12").value(5))
             .andExpect(jsonPath("$.roupa", hasSize(6)))
             .andExpect(jsonPath("$.roupa[0].chave").value("INFANTIL_4"))
             .andExpect(jsonPath("$.roupa[0].quantidade").value(2))
@@ -156,7 +165,11 @@ class RelatorioNecessidadesTest {
             .andExpect(jsonPath("$.roupa[4].chave").value("ADULTO_M"))
             .andExpect(jsonPath("$.roupa[4].quantidade").value(2))
             .andExpect(jsonPath("$.roupa[5].chave").value("ADULTO_G"))
-            .andExpect(jsonPath("$.calcado", hasSize(6)));
+            .andExpect(jsonPath("$.calcado", hasSize(7)))
+            .andExpect(jsonPath("$.semTamanhoInformado").value(1))
+            // agora a pessoa sem idade também entra, e ela não tem calçado
+            .andExpect(jsonPath("$.semCalcadoInformado").value(2))
+            .andExpect(jsonPath("$.semIdadeInformada").value(1));
     }
 
     @Test
@@ -170,7 +183,11 @@ class RelatorioNecessidadesTest {
             .andExpect(jsonPath("$.totalCriancasAte12").value(2))
             .andExpect(jsonPath("$.roupa", hasSize(1)))
             .andExpect(jsonPath("$.roupa[0].chave").value("INFANTIL_4"))
-            .andExpect(jsonPath("$.roupa[0].quantidade").value(2));
+            .andExpect(jsonPath("$.roupa[0].quantidade").value(2))
+            // zero também sai no JSON
+            .andExpect(jsonPath("$.semTamanhoInformado").value(0))
+            .andExpect(jsonPath("$.semCalcadoInformado").value(0))
+            .andExpect(jsonPath("$.semIdadeInformada").value(0));
     }
 
     @Test
@@ -185,7 +202,10 @@ class RelatorioNecessidadesTest {
             .andExpect(jsonPath("$.roupa", hasSize(2)))
             .andExpect(jsonPath("$.roupa[0].chave").value("INFANTIL_4"))
             .andExpect(jsonPath("$.roupa[0].quantidade").value(2))
-            .andExpect(jsonPath("$.roupa[1].chave").value("INFANTIL_8"));
+            .andExpect(jsonPath("$.roupa[1].chave").value("INFANTIL_8"))
+            .andExpect(jsonPath("$.semTamanhoInformado").value(0))
+            .andExpect(jsonPath("$.semCalcadoInformado").value(1))
+            .andExpect(jsonPath("$.semIdadeInformada").value(0));
     }
 
     @Test
@@ -198,7 +218,10 @@ class RelatorioNecessidadesTest {
             .andExpect(jsonPath("$.totalPessoas").value(0))
             .andExpect(jsonPath("$.totalCriancasAte12").value(0))
             .andExpect(jsonPath("$.roupa", hasSize(0)))
-            .andExpect(jsonPath("$.calcado", hasSize(0)));
+            .andExpect(jsonPath("$.calcado", hasSize(0)))
+            .andExpect(jsonPath("$.semTamanhoInformado").value(0))
+            .andExpect(jsonPath("$.semCalcadoInformado").value(0))
+            .andExpect(jsonPath("$.semIdadeInformada").value(0));
     }
 
     @Test
