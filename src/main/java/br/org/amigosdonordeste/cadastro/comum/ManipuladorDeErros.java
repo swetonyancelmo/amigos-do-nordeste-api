@@ -1,5 +1,6 @@
 package br.org.amigosdonordeste.cadastro.comum;
 
+import br.org.amigosdonordeste.cadastro.municipio.CodigoIbgeJaCadastradoException;
 import br.org.amigosdonordeste.cadastro.auth.CredenciaisInvalidasException;
 import br.org.amigosdonordeste.cadastro.auth.SenhaAtualIncorretaException;
 import br.org.amigosdonordeste.cadastro.usuario.EmailJaCadastradoException;
@@ -51,5 +52,16 @@ public class ManipuladorDeErros {
         corpo.put("status", status.value());
         corpo.put("message", mensagem);
         return ResponseEntity.status(status).body(corpo);
+    }
+
+
+    @ExceptionHandler(CodigoIbgeJaCadastradoException.class)
+    public ResponseEntity<Map<String, Object>> codigoIbgeDuplicado(CodigoIbgeJaCadastradoException e) {
+        return resposta(HttpStatus.CONFLICT, e.getMessage());     // 409
+    }
+
+    @ExceptionHandler(RecursoNaoEncontradoException.class)
+    public ResponseEntity<Map<String, Object>> naoEncontrado(RecursoNaoEncontradoException e) {
+        return resposta(HttpStatus.NOT_FOUND, e.getMessage());    // 404
     }
 }
