@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * O que estes testes protegem (issue #31):
  *  - um token de aparelho da agente nao abre nenhuma rota de administracao;
  *  - um token de administrador nao envia pre-cadastro;
+ *  - a agente le a lista enxuta de comunidades, e so ela (issue #8 do app);
  *  - um token de aparelho desconhecido ou de agente desativada nao autentica.
  *
  * A regra de acesso roda antes do roteamento, entao aqui o que se confere e:
@@ -112,6 +113,22 @@ class SegurancaPapeisTest {
             .andReturn().getResponse().getStatus();
         assertFalse(status == 401 || status == 403,
             "a agente deveria passar pela autorização, mas recebeu " + status);
+    }
+
+    @Test
+    @DisplayName("token de agente lê a lista enxuta de comunidades")
+    void agenteLeOpcoesDeComunidade() throws Exception {
+        mvc.perform(get("/api/comunidades/opcoes").header("Authorization", bearerAgente))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("lista enxuta de comunidades é só do aparelho: admin usa /api/comunidades")
+    void adminNaoUsaOpcoesDeComunidade() throws Exception {
+        mvc.perform(get("/api/comunidades/opcoes").header("Authorization", bearerAdmin))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/comunidades/opcoes"))
+            .andExpect(status().isUnauthorized());
     }
 
     @Test
