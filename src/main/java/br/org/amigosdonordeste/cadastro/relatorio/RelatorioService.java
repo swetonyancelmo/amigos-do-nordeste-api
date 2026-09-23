@@ -12,15 +12,20 @@ import org.springframework.transaction.annotation.Transactional;
 import br.org.amigosdonordeste.cadastro.dominio.NumerosCalcado;
 import br.org.amigosdonordeste.cadastro.familia.FamiliaRepositorio;
 import br.org.amigosdonordeste.cadastro.familia.PessoaResponse;
+import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
+import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.PessoaRepositorio;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.FaixaEtaria;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 import br.org.amigosdonordeste.cadastro.relatorio.NecessidadesResponse.ItemContagem;
+import br.org.amigosdonordeste.cadastro.relatorio.SituacaoResponse.Indicador;
 
 /**
  * Issue #18: é este relatório que justifica o sistema inteiro — responde
  * "quantas peças tamanho M eu compro para o Sítio Igrejinha" sem contar à
- * mão. readOnly porque só lê.
+ * mão. Issue #19: os indicadores de situação das famílias. readOnly porque
+ * só lê.
  */
 @Service
 @Transactional(readOnly = true)
@@ -90,5 +95,18 @@ public class RelatorioService {
                 .filter(contagem::containsKey)
                 .map(numero -> new ItemContagem(numero, contagem.get(numero)))
                 .toList();
+    }
+
+    public SituacaoResponse situacao(UUID comunidadeId, UUID municipioId) {
+        long totalFamilias = familiaRepositorio.contarParaRelatorioNecessidades(comunidadeId, municipioId);
+        return new SituacaoResponse(
+                totalFamilias,
+                Indicador.de(familiaRepositorio.contarSemBanheiro(comunidadeId, municipioId), totalFamilias),
+                Indicador.de(familiaRepositorio.contarSoComAbastecimento(
+                        comunidadeId, municipioId, AbastecimentoAgua.CARRO_PIPA), totalFamilias),
+                Indicador.de(familiaRepositorio.contarSoComFonteRenda(
+                        comunidadeId, municipioId, TipoFonteRenda.BOLSA_FAMILIA), totalFamilias),
+                Indicador.de(familiaRepositorio.contarPorTratamentoAgua(
+                        comunidadeId, municipioId, TratamentoAgua.SEM_TRATAMENTO), totalFamilias));
     }
 }
