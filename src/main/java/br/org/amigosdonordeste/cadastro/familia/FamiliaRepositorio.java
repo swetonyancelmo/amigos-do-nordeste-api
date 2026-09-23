@@ -1,5 +1,8 @@
 package br.org.amigosdonordeste.cadastro.familia;
 
+import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
+import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -79,6 +82,7 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
 
     /**
      * Issue #18: total de famílias no escopo do relatório de necessidades.
+     * Também é o denominador dos percentuais da issue #19 (situação).
      * comunidadeId e municipioId são opcionais — sem os dois, conta todas.
      */
     @Query("""
@@ -90,13 +94,59 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
     long contarParaRelatorioNecessidades(@Param("comunidadeId") UUID comunidadeId,
                                         @Param("municipioId") UUID municipioId);
 
-  @Query("""
-    SELECT f FROM Familia f
-    WHERE (:comunidadeId IS NULL OR f.comunidade.id = :comunidadeId)
-      AND (:municipioId IS NULL OR f.comunidade.municipio.id = :municipioId)
-""")
-  List<Familia> buscarParaRelatorioSituacao(
-    @Param("comunidadeId") UUID comunidadeId,
-    @Param("municipioId") UUID municipioId
-  );
+    /*
+     * Issue #19: indicadores de situacao. Cada um e um count no banco, com o
+     * mesmo filtro opcional de comunidade/municipio do relatorio de
+     * necessidades — carregar as familias e percorrer abastecimentoAgua e
+     * fontesRenda em Java faria duas consultas extras por familia (N+1).
+     * O total de familias do escopo vem de contarParaRelatorioNecessidades.
+     */
+
+    /** tem_banheiro nao e true: false ou nao informado. */
+    @Query("""
+        select count(f) from Familia f
+        join f.comunidade c
+        where (:comunidadeId is null or c.id = :comunidadeId)
+          and (:municipioId is null or c.municipio.id = :municipioId)
+          and (f.temBanheiro is null or f.temBanheiro = false)
+        """)
+    long contarSemBanheiro(@Param("comunidadeId") UUID comunidadeId,
+                           @Param("municipioId") UUID municipioId);
+
+    @Query("""
+        select count(f) from Familia f
+        join f.comunidade c
+        where (:comunidadeId is null or c.id = :comunidadeId)
+          and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.tratamentoAgua = :tratamento
+        """)
+    long contarPorTratamentoAgua(@Param("comunidadeId") UUID comunidadeId,
+                                 @Param("municipioId") UUID municipioId,
+                                 @Param("tratamento") TratamentoAgua tratamento);
+
+    /** Abastecimento com exatamente um item, e esse item e o informado. */
+    @Query("""
+        select count(f) from Familia f
+        join f.comunidade c
+        where (:comunidadeId is null or c.id = :comunidadeId)
+          and (:municipioId is null or c.municipio.id = :municipioId)
+          and size(f.abastecimentoAgua) = 1
+          and :abastecimento member of f.abastecimentoAgua
+        """)
+    long contarSoComAbastecimento(@Param("comunidadeId") UUID comunidadeId,
+                                  @Param("municipioId") UUID municipioId,
+                                  @Param("abastecimento") AbastecimentoAgua abastecimento);
+
+    /** Fontes de renda com exatamente um item, e esse item e do tipo informado. */
+    @Query("""
+        select count(f) from Familia f
+        join f.comunidade c
+        where (:comunidadeId is null or c.id = :comunidadeId)
+          and (:municipioId is null or c.municipio.id = :municipioId)
+          and size(f.fontesRenda) = 1
+          and exists (select 1 from FonteRenda fr where fr.familia = f and fr.tipo = :tipo)
+        """)
+    long contarSoComFonteRenda(@Param("comunidadeId") UUID comunidadeId,
+                               @Param("municipioId") UUID municipioId,
+                               @Param("tipo") TipoFonteRenda tipo);
 }
