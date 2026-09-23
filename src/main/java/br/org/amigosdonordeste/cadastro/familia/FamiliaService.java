@@ -55,6 +55,36 @@ public class FamiliaService {
         return FamiliaDetalheResponse.fromEntity(familia);
     }
 
+    /** Issue #43: por padrão só ativas; incluirInativas é o caminho para reativar. */
+    @Transactional(readOnly = true)
+    public List<FamiliaResumoResponse> listar(boolean incluirInativas) {
+        return familiaRepositorio.listar(incluirInativas).stream()
+                .map(FamiliaResumoResponse::fromEntity)
+                .toList();
+    }
+
+    /**
+     * Issue #43: exclusão física não existe — levaria junto pessoas, fontes de
+     * renda e o histórico de contagem. Inativar de novo uma inativa não é erro.
+     */
+    public FamiliaResumoResponse inativar(UUID id) {
+        Familia familia = buscarParaAlterar(id);
+        familia.inativar();
+        return FamiliaResumoResponse.fromEntity(familia);
+    }
+
+    /** Issue #43: desfaz inativar(). Reativar uma ativa não é erro. */
+    public FamiliaResumoResponse reativar(UUID id) {
+        Familia familia = buscarParaAlterar(id);
+        familia.reativar();
+        return FamiliaResumoResponse.fromEntity(familia);
+    }
+
+    private Familia buscarParaAlterar(UUID id) {
+        return familiaRepositorio.findById(id)
+                .orElseThrow(() -> new FamiliaNaoEncontradaException(id));
+    }
+
     /** Issue #14 */
     public FamiliaResponse criar(CriarFamiliaRequisicao request) {
         Familia familia = new Familia();

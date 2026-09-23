@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -88,6 +90,11 @@ class SegurancaPapeisTest {
         mvc.perform(get("/api/usuarios").header("Authorization", bearerAgente))
             .andExpect(status().isForbidden());
         mvc.perform(get("/api/comunidades").header("Authorization", bearerAgente))
+            .andExpect(status().isForbidden());
+        // lista de familias e inativar/reativar: dado de familia, nunca da agente (ADR-0002)
+        mvc.perform(get("/api/familias").header("Authorization", bearerAgente))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/familias/" + UUID.randomUUID() + "/inativar").header("Authorization", bearerAgente))
             .andExpect(status().isForbidden());
         mvc.perform(post("/api/usuarios").header("Authorization", bearerAgente)
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))

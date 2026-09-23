@@ -152,7 +152,8 @@ public class PreCadastroService {
      * Duplicata e o risco numero um da coleta em campo: duas agentes, ou a
      * mesma em duas visitas, cadastrando a mesma familia. Procura dentro da
      * comunidade: primeiro por telefone (sinal mais forte), depois por nome
-     * sem acento e sem maiuscula. Nunca bloqueia — so avisa.
+     * sem acento e sem maiuscula. Nunca bloqueia — so avisa. Familia
+     * inativa nao entra na comparacao (issue #43).
      *
      * So vale para PENDENTE: um aprovado ja virou familia e apontaria a si
      * mesmo; um devolvido nao esta mais na fila. Sem comunidade reconhecida
@@ -169,7 +170,7 @@ public class PreCadastroService {
         // Feito em Java porque o regexp_replace do Postgres e o do H2 divergem.
         String soDigitos = soDigitos(telefone);
         if (!soDigitos.isEmpty()) {
-            for (Familia familia : familias.findByComunidadeIdOrderByResponsavelNomeAsc(comunidadeId)) {
+            for (Familia familia : familias.findByComunidadeIdAndAtivaTrueOrderByResponsavelNomeAsc(comunidadeId)) {
                 if (soDigitos.equals(soDigitos(familia.getTelefone()))) {
                     return duplicata(familia, MotivoDuplicata.TELEFONE_IGUAL);
                 }

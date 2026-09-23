@@ -22,6 +22,7 @@ public record FamiliaResponse(
         List<PessoaResponse> pessoas,
         List<FonteRendaResponse> fontesRenda,
         String observacoes,
+        boolean ativa,
         Totais totais
 ) {
     // calculados na hora, nunca gravados — regra do projeto
@@ -53,6 +54,7 @@ public record FamiliaResponse(
                 pessoas,
                 fontes,
                 familia.getObservacoes(),
+                familia.isAtiva(),
                 new Totais(pessoas.size(), (int) estudando, fontes.size())
         );
     }

@@ -5,6 +5,7 @@ import br.org.amigosdonordeste.cadastro.agente.AgenteRepositorio;
 import br.org.amigosdonordeste.cadastro.agente.TokenAgenteService;
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
+import br.org.amigosdonordeste.cadastro.familia.FamiliaRepositorio;
 import br.org.amigosdonordeste.cadastro.municipio.Municipio;
 import br.org.amigosdonordeste.cadastro.municipio.MunicipioRepositorio;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -50,6 +51,7 @@ class PreCadastroTest {
     @Autowired ObjectMapper json;
     @Autowired PreCadastroRepositorio preCadastros;
     @Autowired AgenteRepositorio agentes;
+    @Autowired FamiliaRepositorio familias;
     @Autowired ComunidadeRepositorio comunidades;
     @Autowired MunicipioRepositorio municipios;
     @Autowired TokenAgenteService tokens;
@@ -60,7 +62,10 @@ class PreCadastroTest {
 
     @BeforeEach
     void preparar() {
+        // outra classe de teste pode ter deixado familia no H2 compartilhado,
+        // e familia referencia comunidade: sem isto a FK barra o deleteAll
         preCadastros.deleteAll();
+        familias.deleteAll();
         agentes.deleteAll();
         comunidades.deleteAll();
         municipios.deleteAll();

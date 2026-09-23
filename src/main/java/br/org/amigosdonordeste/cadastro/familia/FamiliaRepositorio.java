@@ -51,29 +51,42 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
         join fetch f.comunidade c
         join fetch c.municipio
         where upper(f.responsavelNome) like upper(concat('%', :nome, '%'))
+          and f.ativa = true
         order by f.responsavelNome
         """)
     List<Familia> buscarPorResponsavel(@Param("nome") String nome);
 
+    /**
+     * Issue #43: GET /api/familias. Inativa fica de fora, a nao ser que
+     * incluirInativas venha true — e o unico jeito de achar uma para reativar.
+     * join fetch pelo mesmo motivo da busca acima (N+1).
+     */
     @Query("""
         select f from Familia f
         join fetch f.comunidade c
         join fetch c.municipio
+        where (:incluirInativas = true or f.ativa = true)
         order by f.responsavelNome
         """)
-    List<Familia> listarComComunidade();
+    List<Familia> listar(@Param("incluirInativas") boolean incluirInativas);
 
-    List<Familia> findByComunidadeIdOrderByResponsavelNomeAsc(UUID comunidadeId);
+    /** Duplicata do pre-cadastro: so contra familia ativa (ver buscarPorNomeParecidoNaComunidade). */
+    List<Familia> findByComunidadeIdAndAtivaTrueOrderByResponsavelNomeAsc(UUID comunidadeId);
 
     /**
      * Deteccao de duplicata por nome, dentro da comunidade. unaccent (extensao
      * instalada na V1) porque o cadastro vem de papel: "Jose" tem que achar
      * "José". No perfil de teste o H2 recebe um alias UNACCENT feito em Java
      * (ver application-test.yml).
+     *
+     * Familia inativa nao conta: em geral foi inativada justamente por ser
+     * duplicata ou erro, e apontar para ela mandaria a revisora para um
+     * registro que ja saiu da base.
      */
     @Query(value = """
         select f.* from familia f
         where f.comunidade_id = :comunidadeId
+          and f.ativa = true
           and unaccent(lower(trim(f.responsavel_nome))) = unaccent(lower(trim(:nome)))
         order by f.responsavel_nome
         """, nativeQuery = true)
@@ -84,12 +97,14 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
      * Issue #18: total de famílias no escopo do relatório de necessidades.
      * Também é o denominador dos percentuais da issue #19 (situação).
      * comunidadeId e municipioId são opcionais — sem os dois, conta todas.
+     * Toda contagem daqui para baixo ignora família inativa (issue #43).
      */
     @Query("""
         select count(f) from Familia f
         join f.comunidade c
         where (:comunidadeId is null or c.id = :comunidadeId)
           and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
         """)
     long contarParaRelatorioNecessidades(@Param("comunidadeId") UUID comunidadeId,
                                         @Param("municipioId") UUID municipioId);
@@ -108,6 +123,7 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
         join f.comunidade c
         where (:comunidadeId is null or c.id = :comunidadeId)
           and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
           and (f.temBanheiro is null or f.temBanheiro = false)
         """)
     long contarSemBanheiro(@Param("comunidadeId") UUID comunidadeId,
@@ -118,6 +134,7 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
         join f.comunidade c
         where (:comunidadeId is null or c.id = :comunidadeId)
           and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
           and f.tratamentoAgua = :tratamento
         """)
     long contarPorTratamentoAgua(@Param("comunidadeId") UUID comunidadeId,
@@ -130,6 +147,7 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
         join f.comunidade c
         where (:comunidadeId is null or c.id = :comunidadeId)
           and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
           and size(f.abastecimentoAgua) = 1
           and :abastecimento member of f.abastecimentoAgua
         """)
@@ -143,6 +161,7 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
         join f.comunidade c
         where (:comunidadeId is null or c.id = :comunidadeId)
           and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
           and size(f.fontesRenda) = 1
           and exists (select 1 from FonteRenda fr where fr.familia = f and fr.tipo = :tipo)
         """)
