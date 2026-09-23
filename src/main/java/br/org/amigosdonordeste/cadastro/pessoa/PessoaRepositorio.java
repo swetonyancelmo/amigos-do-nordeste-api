@@ -19,6 +19,7 @@ public interface PessoaRepositorio extends JpaRepository<Pessoa, UUID> {
      * e municipioId são opcionais — sem os dois, traz todo mundo. Só filtra
      * (join, não join fetch): quem chama usa apenas os campos da própria
      * pessoa, então carregar família/comunidade aqui seria trabalho à toa.
+     * Pessoa de família inativa não entra (issue #43).
      */
     @Query("""
         select p from Pessoa p
@@ -26,6 +27,7 @@ public interface PessoaRepositorio extends JpaRepository<Pessoa, UUID> {
         join f.comunidade c
         where (:comunidadeId is null or c.id = :comunidadeId)
           and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
         """)
     List<Pessoa> buscarParaRelatorioNecessidades(@Param("comunidadeId") UUID comunidadeId,
                                                 @Param("municipioId") UUID municipioId);

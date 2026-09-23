@@ -34,6 +34,7 @@ public record FamiliaDetalheResponse(
         List<PessoaResponse> pessoas,
         List<FonteRendaResponse> fontesRenda,
         String observacoes,
+        boolean ativa,
         OffsetDateTime criadoEm,
         OffsetDateTime atualizadoEm,
         Totais totais
@@ -86,6 +87,7 @@ public record FamiliaDetalheResponse(
                 pessoas,
                 fontes,
                 familia.getObservacoes(),
+                familia.isAtiva(),
                 familia.getCriadoEm(),
                 familia.getAtualizadoEm(),
                 contar(pessoas, fontes)
