@@ -1,5 +1,6 @@
 package br.org.amigosdonordeste.cadastro.auth;
 
+import br.org.amigosdonordeste.cadastro.usuario.Papel;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.DisplayName;
@@ -26,13 +27,14 @@ class JwtServiceTest {
     }
 
     @Test
-    @DisplayName("o token de acesso carrega o id da usuária e o tipo access")
+    @DisplayName("o token de acesso carrega o id da usuária, o tipo access e o papel")
     void tokenDeAcesso() {
         UUID id = UUID.randomUUID();
-        Claims claims = servico(SEGREDO).ler(servico(SEGREDO).gerarAcesso(id, "a@b.com"));
+        Claims claims = servico(SEGREDO).ler(servico(SEGREDO).gerarAcesso(id, "a@b.com", Papel.ADMIN));
         assertEquals(id.toString(), claims.getSubject());
         assertEquals("access", claims.get("tipo", String.class));
         assertEquals("a@b.com", claims.get("email", String.class));
+        assertEquals("ADMIN", claims.get("papel", String.class));
     }
 
     @Test
@@ -42,12 +44,13 @@ class JwtServiceTest {
         Claims claims = jwt.ler(jwt.gerarRenovacao(UUID.randomUUID(), "a@b.com"));
         assertEquals("refresh", claims.get("tipo", String.class));
         assertNotEquals("access", claims.get("tipo", String.class));
+        assertNull(claims.get("papel", String.class), "o token de renovação não carrega papel");
     }
 
     @Test
     @DisplayName("token assinado com outro segredo é recusado")
     void assinaturaDeOutroSegredo() {
-        String token = servico(SEGREDO).gerarAcesso(UUID.randomUUID(), "a@b.com");
+        String token = servico(SEGREDO).gerarAcesso(UUID.randomUUID(), "a@b.com", Papel.ADMIN);
         JwtService outro = servico("um-outro-segredo-completamente-diferente-e-longo");
         assertThrows(JwtException.class, () -> outro.ler(token));
     }

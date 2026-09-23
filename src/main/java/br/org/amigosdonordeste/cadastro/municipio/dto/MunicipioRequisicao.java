@@ -12,11 +12,12 @@ public record MunicipioRequisicao(
     String nome,
 
     @NotBlank(message = "Informe a UF.")
-    @Pattern(regexp = "[A-Z]{2}", message = "A UF tem 2 letras maiúsculas, como PE.")
+    @Pattern(regexp = "[A-Za-z]{2}", message = "A UF tem 2 letras, como PE.")
     String uf,
 
-    // sem @NotBlank: o código é opcional
-    @Pattern(regexp = "\\d{7}", message = "O código do IBGE tem exatamente 7 dígitos.")
+    // sem @NotBlank: o código é opcional. O `?` aceita o campo vazio do
+    // formulário, que o service normaliza para null.
+    @Pattern(regexp = "(\\d{7})?", message = "O código do IBGE tem exatamente 7 dígitos.")
     String codigoIbge
 
 ) { }

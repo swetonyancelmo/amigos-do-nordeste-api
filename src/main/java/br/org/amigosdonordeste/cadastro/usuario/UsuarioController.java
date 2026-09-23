@@ -1,8 +1,14 @@
 package br.org.amigosdonordeste.cadastro.usuario;
 
+import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
 import br.org.amigosdonordeste.cadastro.usuario.dto.CriarUsuarioRequisicao;
 import br.org.amigosdonordeste.cadastro.usuario.dto.UsuarioResposta;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -37,6 +43,16 @@ public class UsuarioController {
     }
 
     @Operation(summary = "Cria uma conta de acesso (exige estar autenticado)")
+    @SecurityRequirement(name = "bearer")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Usuário criado com sucesso"),
+        @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class))),
+        @ApiResponse(responseCode = "401", description = "Não autenticado",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class))),
+        @ApiResponse(responseCode = "409", description = "E-mail já cadastrado",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class)))
+    })
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public UsuarioResposta criar(@Valid @RequestBody CriarUsuarioRequisicao dados) {
@@ -44,6 +60,12 @@ public class UsuarioController {
     }
 
     @Operation(summary = "Lista as contas existentes")
+    @SecurityRequirement(name = "bearer")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista de usuários retornada com sucesso"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class)))
+    })
     @GetMapping
     public List<UsuarioResposta> listar() {
         return service.listar().stream().map(UsuarioResposta::de).toList();

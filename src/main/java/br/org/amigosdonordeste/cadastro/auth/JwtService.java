@@ -1,5 +1,6 @@
 package br.org.amigosdonordeste.cadastro.auth;
 
+import br.org.amigosdonordeste.cadastro.usuario.Papel;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -37,24 +38,31 @@ public class JwtService {
         this.validadeRenovacao = validadeRenovacao;
     }
 
-    public String gerarAcesso(UUID usuarioId, String email) {
-        return gerar(usuarioId, email, TIPO_ACESSO, validadeAcesso);
+    /**
+     * O papel vai dentro do token: o filtro nao precisa consultar o banco a
+     * cada requisicao, e o token vive 15 minutos — tempo curto o bastante para
+     * uma mudanca de papel nao ficar "presa" num token velho.
+     */
+    public String gerarAcesso(UUID usuarioId, String email, Papel papel) {
+        return gerar(usuarioId, email, TIPO_ACESSO, validadeAcesso, papel);
     }
 
+    /** O token de renovacao nao carrega papel: ele nao abre rota nenhuma. */
     public String gerarRenovacao(UUID usuarioId, String email) {
-        return gerar(usuarioId, email, TIPO_RENOVACAO, validadeRenovacao);
+        return gerar(usuarioId, email, TIPO_RENOVACAO, validadeRenovacao, null);
     }
 
     public Duration getValidadeRenovacao() {
         return validadeRenovacao;
     }
 
-    private String gerar(UUID usuarioId, String email, String tipo, Duration validade) {
+    private String gerar(UUID usuarioId, String email, String tipo, Duration validade, Papel papel) {
         long agora = System.currentTimeMillis();
         return Jwts.builder()
             .subject(usuarioId.toString())
             .claim("email", email)
             .claim("tipo", tipo)
+            .claim("papel", papel == null ? null : papel.name())
             .issuedAt(new Date(agora))
             .expiration(new Date(agora + validade.toMillis()))
             .signWith(chave)

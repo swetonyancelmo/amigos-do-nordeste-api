@@ -1,11 +1,11 @@
 package br.org.amigosdonordeste.cadastro.municipio;
 
-import br.org.amigosdonordeste.cadastro.comum.RecursoNaoEncontradoException;
 import br.org.amigosdonordeste.cadastro.municipio.dto.MunicipioRequisicao;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -13,7 +13,6 @@ public class MunicipioService {
 
     private final MunicipioRepositorio municipios;
 
-    // O Spring passa o repositório sozinho aqui. Você nunca dá `new` em nada.
     public MunicipioService(MunicipioRepositorio municipios) {
         this.municipios = municipios;
     }
@@ -21,6 +20,12 @@ public class MunicipioService {
     @Transactional(readOnly = true)
     public List<Municipio> listar() {
         return municipios.findAllByOrderByNomeAsc();
+    }
+
+    @Transactional(readOnly = true)
+    public Municipio buscarPorId(UUID id) {
+        return municipios.findById(id)
+            .orElseThrow(() -> new MunicipioNaoEncontradoException(id));
     }
 
     @Transactional
@@ -38,8 +43,7 @@ public class MunicipioService {
 
     @Transactional
     public Municipio atualizar(UUID id, MunicipioRequisicao dados) {
-        Municipio m = municipios.findById(id)
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Município não encontrado."));
+        Municipio m = buscarPorId(id);
 
         String codigo = normalizar(dados.codigoIbge());
 
@@ -55,7 +59,7 @@ public class MunicipioService {
 
     private void aplicar(Municipio m, MunicipioRequisicao dados, String codigo) {
         m.setNome(dados.nome().trim());
-        m.setUf(dados.uf().toUpperCase());
+        m.setUf(dados.uf().trim().toUpperCase(Locale.ROOT));
         m.setCodigoIbge(codigo);
     }
 

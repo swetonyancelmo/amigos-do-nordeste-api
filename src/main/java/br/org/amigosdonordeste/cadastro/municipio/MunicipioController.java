@@ -34,9 +34,15 @@ public class MunicipioController {
         return service.listar().stream().map(MunicipioResposta::de).toList();
     }
 
+    @Operation(summary = "Busca um município pelo ID")
+    @GetMapping("/{id}")
+    public MunicipioResposta buscarPorId(@PathVariable UUID id) {
+        return MunicipioResposta.de(service.buscarPorId(id));
+    }
+
     @Operation(summary = "Cadastra um município")
-    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public MunicipioResposta criar(@Valid @RequestBody MunicipioRequisicao dados) {
         return MunicipioResposta.de(service.criar(dados));
     }

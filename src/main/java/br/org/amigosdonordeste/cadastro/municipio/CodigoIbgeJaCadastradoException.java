@@ -5,5 +5,3 @@ public class CodigoIbgeJaCadastradoException extends RuntimeException {
         super("Já existe um município com esse código do IBGE.");
     }
 }
-
-

@@ -32,8 +32,10 @@ pedida, no tamanho pedido.
    edite uma migração existente.
 5. **O cadastro de usuário existe, mas é autenticado** (`POST /api/usuarios`).
    Nunca o torne público. A primeira conta vem do perfil `criar-usuario`.
-6. **Trancado por padrão**: `anyRequest().authenticated()`; abrir rota só
-   acrescentando à lista de `permitAll` em `SegurancaConfig`.
+6. **Trancado por padrão**: `anyRequest().hasRole("ADMIN")`; abrir rota só
+   acrescentando à lista de `permitAll` em `SegurancaConfig`. O token do
+   aparelho da agente (`ROLE_AGENTE`) abre **só** `POST /api/pre-cadastros`,
+   listado explicitamente ali — nunca dê a ele mais que isso.
 7. **Data de nascimento é opcional**; existe `idadeEstimada` + `idadeEstimadaEm`.
    Nunca torne a data obrigatória.
 8. **Mapa é por comunidade**, nunca por família.

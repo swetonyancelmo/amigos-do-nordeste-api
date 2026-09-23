@@ -28,6 +28,7 @@ public class UsuarioService {
         usuario.setNome(dados.nome().trim());
         usuario.setEmail(email);
         usuario.setSenhaHash(codificador.encode(dados.senha()));
+        usuario.setPapel(Papel.ADMIN);
         usuario.setAtivo(true);
         return usuarios.save(usuario);
     }
