@@ -40,6 +40,15 @@ public class ComunidadeService {
       .map(ComunidadeResponse::fromEntity)
       .toList();
   }
+
+  /** Lista enxuta para o aparelho da agente — ver ComunidadeOpcaoResponse. */
+  @Transactional(readOnly = true)
+  public List<ComunidadeOpcaoResponse> listarOpcoes() {
+    return comunidadeRepositorio.listarComMunicipio().stream()
+      .map(ComunidadeOpcaoResponse::fromEntity)
+      .toList();
+  }
+
   @Transactional(readOnly = true)
   public ComunidadeResponse buscarPorId(UUID id){
     return comunidadeRepositorio.findById(id)

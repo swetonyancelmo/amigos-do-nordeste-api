@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +30,19 @@ public class ComunidadeController {
       @Parameter(description = "Filtra pelo município; omitido, lista todas as comunidades")
       @RequestParam(required = false) UUID municipioId) {
     return comunidadeService.listar(municipioId);
+  }
+
+  /**
+   * A lista que o app da agente baixa na ativacao e guarda para escolher a
+   * comunidade offline. So AGENTE, como o envio de pre-cadastro: SegurancaConfig
+   * ja restringe, e o @PreAuthorize repete a regra para nao depender so de la.
+   */
+  @Operation(summary = "Lista enxuta de comunidades para o aparelho da agente",
+      description = "Só id, nome e município de cada comunidade — sem líder, telefone nem coordenadas.")
+  @GetMapping("/opcoes")
+  @PreAuthorize("hasRole('AGENTE')")
+  public List<ComunidadeOpcaoResponse> listarOpcoes() {
+    return comunidadeService.listarOpcoes();
   }
 
   @Operation(summary = "Busca uma comunidade pelo ID")
