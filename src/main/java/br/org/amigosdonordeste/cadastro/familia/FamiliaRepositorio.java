@@ -89,4 +89,14 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
         """)
     long contarParaRelatorioNecessidades(@Param("comunidadeId") UUID comunidadeId,
                                         @Param("municipioId") UUID municipioId);
+
+  @Query("""
+    SELECT f FROM Familia f
+    WHERE (:comunidadeId IS NULL OR f.comunidade.id = :comunidadeId)
+      AND (:municipioId IS NULL OR f.comunidade.municipio.id = :municipioId)
+""")
+  List<Familia> buscarParaRelatorioSituacao(
+    @Param("comunidadeId") UUID comunidadeId,
+    @Param("municipioId") UUID municipioId
+  );
 }
