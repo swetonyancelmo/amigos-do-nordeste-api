@@ -4,7 +4,7 @@ import br.org.amigosdonordeste.cadastro.agente.AgenteRepositorio;
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
 import br.org.amigosdonordeste.cadastro.familia.Familia;
-import br.org.amigosdonordeste.cadastro.familia.FamiliaRepositorio;
+import br.org.amigosdonordeste.cadastro.familia.repository.FamiliaRepositorio;
 import br.org.amigosdonordeste.cadastro.familia.FamiliaResponse;
 import br.org.amigosdonordeste.cadastro.familia.FamiliaService;
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;

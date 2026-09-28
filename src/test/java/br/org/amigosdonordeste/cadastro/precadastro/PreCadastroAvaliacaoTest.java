@@ -6,7 +6,7 @@ import br.org.amigosdonordeste.cadastro.auth.JwtService;
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
 import br.org.amigosdonordeste.cadastro.familia.Familia;
-import br.org.amigosdonordeste.cadastro.familia.FamiliaRepositorio;
+import br.org.amigosdonordeste.cadastro.familia.repository.FamiliaRepositorio;
 import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;

@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaResumoResponse;
+import br.org.amigosdonordeste.cadastro.familia.repository.FamiliaRepositorio;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -286,4 +288,86 @@ public class FamiliaService {
     boolean semIdadeAlguma = pessoa.getDataNascimento() == null && pessoa.getIdadeEstimada() == null;
     pessoa.setCadastroIncompleto(semNome || semIdadeAlguma || Boolean.TRUE.equals(request.cadastroIncompleto()));
     }
+  public org.springframework.data.domain.Page<FamiliaResumoResponse> listar(
+    br.org.amigosdonordeste.cadastro.familia.dto.FamiliaFiltroDTO filtro) {
+
+    var pageable = org.springframework.data.domain.PageRequest.of(
+      filtro.paginaNormalizada(),
+      filtro.porPaginaNormalizada(),
+      org.springframework.data.domain.Sort.by("responsavelNome").ascending()
+    );
+
+    var pagina = familiaRepositorio.findAll(
+      br.org.amigosdonordeste.cadastro.familia.repository.FamiliaEspecificacao.comFiltro(filtro),
+      pageable
+    );
+
+    if (pagina.isEmpty()) {
+      return org.springframework.data.domain.Page.empty(pageable);
+    }
+
+    List<UUID> ids = pagina.map(Familia::getId).toList();
+    List<Familia> familias = familiaRepositorio.buscarComPessoasPorIds(ids);
+
+    Map<UUID, Familia> mapaPorId = new HashMap<>();
+    for (Familia f : familias) {
+      mapaPorId.put(f.getId(), f);
+    }
+
+    // Mantém a exata ordenação da página original
+    List<FamiliaResumoResponse> resumo = ids.stream()
+      .map(mapaPorId::get)
+      .map(this::construirFamiliaResumo)
+      .toList();
+
+    return new org.springframework.data.domain.PageImpl<>(resumo, pageable, pagina.getTotalElements());
+  }
+
+  private FamiliaResumoResponse construirFamiliaResumo(Familia familia) {
+    int ate12 = 0;
+    int de13a59 = 0;
+    int sessentaOuMais = 0;
+    LocalDate hoje = LocalDate.now();
+
+    for (Pessoa pessoa : familia.getPessoas()) {
+      Integer idade = calcularIdade(pessoa, hoje);
+      if (idade != null) {
+        if (idade <= 12) {
+          ate12++;
+        } else if (idade <= 59) {
+          de13a59++;
+        } else {
+          sessentaOuMais++;
+        }
+      }
+    }
+
+    boolean semBanheiro = Boolean.FALSE.equals(familia.getTemBanheiro());
+
+    return new FamiliaResumoResponse(
+      familia.getId(),
+      familia.getResponsavelNome(),
+      familia.getComunidade().getNome(),
+      familia.getComunidade().getMunicipio().getNome(),
+      semBanheiro,
+      familia.getPessoas().size(),
+      ate12,
+      de13a59,
+      sessentaOuMais
+    );
+  }
+
+  /**
+   * Calcula a idade com base na data de nascimento ou na estimativa projetada.
+   */
+  private Integer calcularIdade(Pessoa pessoa, LocalDate hoje) {
+    if (pessoa.getDataNascimento() != null) {
+      return java.time.Period.between(pessoa.getDataNascimento(), hoje).getYears();
+    }
+    if (pessoa.getIdadeEstimada() != null && pessoa.getIdadeEstimadaEm() != null) {
+      int anosPassados = java.time.Period.between(pessoa.getIdadeEstimadaEm(), hoje).getYears();
+      return pessoa.getIdadeEstimada() + Math.max(0, anosPassados);
+    }
+    return null;
+  }
 }

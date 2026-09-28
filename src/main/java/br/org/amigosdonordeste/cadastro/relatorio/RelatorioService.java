@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.org.amigosdonordeste.cadastro.dominio.NumerosCalcado;
-import br.org.amigosdonordeste.cadastro.familia.FamiliaRepositorio;
+import br.org.amigosdonordeste.cadastro.familia.repository.FamiliaRepositorio;
 import br.org.amigosdonordeste.cadastro.familia.PessoaResponse;
 import br.org.amigosdonordeste.cadastro.pessoa.PessoaRepositorio;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.FaixaEtaria;

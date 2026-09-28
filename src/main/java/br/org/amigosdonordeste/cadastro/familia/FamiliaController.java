@@ -2,15 +2,12 @@ package br.org.amigosdonordeste.cadastro.familia;
 
 import java.util.UUID;
 
+import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaFiltroDTO;
+import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaResumoResponse;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
 import br.org.amigosdonordeste.cadastro.familia.request.AtualizarFamiliaRequisicao;
@@ -57,4 +54,8 @@ public class FamiliaController {
     public FamiliaResponse atualizar(@PathVariable UUID id, @Valid @RequestBody AtualizarFamiliaRequisicao request) {
         return familiaService.atualizar(id, request);
     }
+  @GetMapping
+  public ResponseEntity<Page<FamiliaResumoResponse>> listar(@ModelAttribute FamiliaFiltroDTO filtro) {
+    return ResponseEntity.ok(familiaService.listar(filtro));
+  }
 }
