@@ -110,10 +110,10 @@ class FamiliaInativacaoTest {
     void familiaNovaNasceAtiva() throws Exception {
         mvc.perform(get("/api/familias").header("Authorization", bearerAdmin))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(2)))
-            .andExpect(jsonPath("$[0].ativa").value(true))
-            .andExpect(jsonPath("$[0].comunidadeNome").value("Sítio de Teste"))
-            .andExpect(jsonPath("$[0].municipioNome").value("Município de Teste"));
+            .andExpect(jsonPath("$.itens", hasSize(2)))
+            .andExpect(jsonPath("$.itens[0].ativa").value(true))
+            .andExpect(jsonPath("$.itens[0].comunidadeNome").value("Sítio de Teste"))
+            .andExpect(jsonPath("$.itens[0].municipioNome").value("Município de Teste"));
     }
 
     @Test
@@ -123,13 +123,13 @@ class FamiliaInativacaoTest {
 
         mvc.perform(get("/api/familias").header("Authorization", bearerAdmin))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(1)))
-            .andExpect(jsonPath("$[0].id").value(ativa.getId().toString()));
+            .andExpect(jsonPath("$.itens", hasSize(1)))
+            .andExpect(jsonPath("$.itens[0].id").value(ativa.getId().toString()));
 
         mvc.perform(get("/api/familias").param("incluirInativas", "true").header("Authorization", bearerAdmin))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(2)))
-            .andExpect(jsonPath("$[?(@.id == '" + aInativar.getId() + "')].ativa").value(false));
+            .andExpect(jsonPath("$.itens", hasSize(2)))
+            .andExpect(jsonPath("$.itens[?(@.id == '" + aInativar.getId() + "')].ativa").value(false));
     }
 
     @Test
@@ -159,7 +159,7 @@ class FamiliaInativacaoTest {
             .andExpect(jsonPath("$.ativa").value(true));
 
         mvc.perform(get("/api/familias").header("Authorization", bearerAdmin))
-            .andExpect(jsonPath("$", hasSize(2)));
+            .andExpect(jsonPath("$.itens", hasSize(2)));
         mvc.perform(get("/api/relatorios/situacao").header("Authorization", bearerAdmin))
             .andExpect(jsonPath("$.totalFamilias").value(2));
         mvc.perform(get("/api/relatorios/necessidades").header("Authorization", bearerAdmin))

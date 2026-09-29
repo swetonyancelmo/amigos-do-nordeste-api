@@ -4,6 +4,7 @@ import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -11,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
+public interface FamiliaRepositorio extends JpaRepository<Familia, UUID>, JpaSpecificationExecutor<Familia> {
 
     /**
      * Issue #17: a ficha completa que a tela de edicao carrega. Join fetch de
@@ -57,18 +58,21 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
     List<Familia> buscarPorResponsavel(@Param("nome") String nome);
 
     /**
-     * Issue #43: GET /api/familias. Inativa fica de fora, a nao ser que
-     * incluirInativas venha true — e o unico jeito de achar uma para reativar.
-     * join fetch pelo mesmo motivo da busca acima (N+1).
+     * Issue #16: segunda etapa de GET /api/familias. A primeira é o
+     * findAll(Specification, Pageable) com os filtros, que devolve a página de
+     * famílias sem nada associado carregado (mais o count). Aqui vêm comunidade, município e pessoas das
+     * famílias dessa página numa consulta só — os totais da linha saem de
+     * pessoas. Não dá pra paginar direto com join fetch de coleção: o
+     * Hibernate traria tudo e paginaria em memória (HHH90003004).
      */
     @Query("""
-        select f from Familia f
+        select distinct f from Familia f
         join fetch f.comunidade c
         join fetch c.municipio
-        where (:incluirInativas = true or f.ativa = true)
-        order by f.responsavelNome
+        left join fetch f.pessoas
+        where f.id in :ids
         """)
-    List<Familia> listar(@Param("incluirInativas") boolean incluirInativas);
+    List<Familia> buscarComPessoasPorIds(@Param("ids") List<UUID> ids);
 
     /** Duplicata do pre-cadastro: so contra familia ativa (ver buscarPorNomeParecidoNaComunidade). */
     List<Familia> findByComunidadeIdAndAtivaTrueOrderByResponsavelNomeAsc(UUID comunidadeId);

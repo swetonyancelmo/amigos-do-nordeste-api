@@ -9,13 +9,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.org.amigosdonordeste.cadastro.comum.dto.PaginaResposta;
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
 import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
 import br.org.amigosdonordeste.cadastro.dominio.NumerosCalcado;
+import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaFiltroDTO;
 import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
@@ -55,12 +60,38 @@ public class FamiliaService {
         return FamiliaDetalheResponse.fromEntity(familia);
     }
 
-    /** Issue #43: por padrão só ativas; incluirInativas é o caminho para reativar. */
+    /**
+     * Issue #16 (filtros, paginação, totais) e #43 (inativas só com
+     * incluirInativas=true). Três consultas, qualquer que seja o tamanho da
+     * página: a página filtrada, o count e comunidade/município/pessoas das
+     * famílias da página (buscarComPessoasPorIds).
+     */
     @Transactional(readOnly = true)
-    public List<FamiliaResumoResponse> listar(boolean incluirInativas) {
-        return familiaRepositorio.listar(incluirInativas).stream()
+    public PaginaResposta<FamiliaResumoResponse> listar(FamiliaFiltroDTO filtro) {
+        // id desempata nomes iguais — sem ele a mesma família pode aparecer
+        // em duas páginas (ou em nenhuma)
+        PageRequest pageable = PageRequest.of(
+                filtro.paginaNormalizada(),
+                filtro.porPaginaNormalizada(),
+                Sort.by("responsavelNome", "id"));
+
+        Page<Familia> pagina = familiaRepositorio.findAll(FamiliaEspecificacao.comFiltro(filtro), pageable);
+        if (pagina.isEmpty()) {
+            return PaginaResposta.de(pagina, List.of());
+        }
+
+        List<UUID> ids = pagina.map(Familia::getId).toList();
+        Map<UUID, Familia> carregadasPorId = new HashMap<>();
+        for (Familia familia : familiaRepositorio.buscarComPessoasPorIds(ids)) {
+            carregadasPorId.put(familia.getId(), familia);
+        }
+
+        // devolve na ordem da página, não na ordem do "in (...)"
+        List<FamiliaResumoResponse> itens = ids.stream()
+                .map(carregadasPorId::get)
                 .map(FamiliaResumoResponse::fromEntity)
                 .toList();
+        return PaginaResposta.de(pagina, itens);
     }
 
     /**
