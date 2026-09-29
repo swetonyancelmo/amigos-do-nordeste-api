@@ -37,13 +37,22 @@ exigiu a coluna de papel que esta ADR já previa (migração `V10`).
 | Credencial | Quem | Papel | O que abre |
 |---|---|---|---|
 | JWT de acesso (login) | usuária do painel | `ADMIN` | tudo, menos enviar pré-cadastro |
-| Token de aparelho (`Bearer agente_…`) | agente de campo | `AGENTE` | **só** `POST /api/pre-cadastros` |
+| Token de aparelho (`Bearer agente_…`) | agente de campo | `AGENTE` | **só** `POST /api/pre-cadastros` e `GET /api/comunidades/opcoes` |
 
 O token do aparelho é opaco (32 bytes aleatórios), nasce da troca de um código
 de convite de uso único e só o **SHA-256** dele fica no banco — sem sal, de
 propósito, porque o filtro precisa achar a agente pelo hash e o token já tem
 entropia suficiente. Um token de aparelho que vazar não lista família, não vê
 relatório e não abre o painel: `anyRequest().hasRole("ADMIN")`.
+
+**Exceção de leitura (23/09/2026): `GET /api/comunidades/opcoes`.** A agente
+escolhe a comunidade numa lista, sem digitar, e precisa dela offline (issue #8
+do app). Digitado, "Sitio Igrejinha", "sítio igrejinha" e "Igrejinha" viram
+três comunidades e o relatório por comunidade deixa de fechar. A rota é
+separada de `GET /api/comunidades` para devolver só id, nome e município:
+líder, telefone do líder e coordenadas não vão para o celular, que pode ser
+perdido. Comunidade é lista fechada, não dado de família — continua valendo
+que nenhuma família sai do servidor para o aparelho.
 
 ## Decisão
 

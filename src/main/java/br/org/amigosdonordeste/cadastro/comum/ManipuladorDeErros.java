@@ -19,6 +19,7 @@ import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadEx
 import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.NumeroCalcadoInvalidoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
+import br.org.amigosdonordeste.cadastro.municipio.CodigoIbgeJaCadastradoException;
 import br.org.amigosdonordeste.cadastro.municipio.MunicipioNaoEncontradoException;
 import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroInvalidoException;
 import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroJaAvaliadoException;
@@ -66,6 +67,11 @@ public class ManipuladorDeErros {
     @ExceptionHandler(MunicipioNaoEncontradoException.class)
     public ResponseEntity<ErroResposta> municipioNaoEncontrado(MunicipioNaoEncontradoException e) {
         return resposta(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(CodigoIbgeJaCadastradoException.class)
+    public ResponseEntity<ErroResposta> codigoIbgeDuplicado(CodigoIbgeJaCadastradoException e) {
+        return resposta(HttpStatus.CONFLICT, e.getMessage());
     }
 
     @ExceptionHandler(FamiliaNaoEncontradaException.class)

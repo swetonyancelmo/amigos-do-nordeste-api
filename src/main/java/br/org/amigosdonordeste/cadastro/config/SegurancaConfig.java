@@ -29,8 +29,9 @@ import java.util.List;
  *  - token do aparelho da agente -> ROLE_AGENTE (FiltroTokenAgente)
  *
  * Toda rota nova nasce ADMIN. A agente so entra onde estiver listada aqui
- * explicitamente — hoje, a rota de envio de pre-cadastro. Um token de aparelho
- * que vazasse nao abre a base.
+ * explicitamente — hoje, o envio de pre-cadastro e a lista enxuta de
+ * comunidades (lista fechada, nao dado de familia). Um token de aparelho que
+ * vazasse nao abre a base.
  *
  * O controller dessa rota pode (e deve) repetir a regra com
  * {@code @PreAuthorize("hasRole('AGENTE')")}: @EnableMethodSecurity esta ligado.
@@ -88,6 +89,9 @@ public class SegurancaConfig {
                 // A unica porta do aparelho da agente. So AGENTE: o administrador
                 // nao envia pre-cadastro, ele aprova.
                 .requestMatchers(HttpMethod.POST, "/api/pre-cadastros").hasRole("AGENTE")
+                // Lista de comunidades para a agente escolher offline, sem digitar.
+                // So id, nome e municipio: nada de lider nem de familia.
+                .requestMatchers(HttpMethod.GET, "/api/comunidades/opcoes").hasRole("AGENTE")
                 .anyRequest().hasRole("ADMIN"))
             .exceptionHandling(e -> e.authenticationEntryPoint(
                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

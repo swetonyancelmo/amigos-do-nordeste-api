@@ -34,8 +34,10 @@ pedida, no tamanho pedido.
    Nunca o torne público. A primeira conta vem do perfil `criar-usuario`.
 6. **Trancado por padrão**: `anyRequest().hasRole("ADMIN")`; abrir rota só
    acrescentando à lista de `permitAll` em `SegurancaConfig`. O token do
-   aparelho da agente (`ROLE_AGENTE`) abre **só** `POST /api/pre-cadastros`,
-   listado explicitamente ali — nunca dê a ele mais que isso.
+   aparelho da agente (`ROLE_AGENTE`) abre **só** `POST /api/pre-cadastros` e
+   `GET /api/comunidades/opcoes` (lista enxuta, sem dados do líder), listados
+   explicitamente ali — nunca dê a ele mais que isso, e nunca dado de família
+   (ADR-0002).
 7. **Data de nascimento é opcional**; existe `idadeEstimada` + `idadeEstimadaEm`.
    Nunca torne a data obrigatória.
 8. **Mapa é por comunidade**, nunca por família.

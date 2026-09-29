@@ -6,7 +6,6 @@ import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
 import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
-import br.org.amigosdonordeste.cadastro.familia.repository.FamiliaRepositorio;
 import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
@@ -59,8 +58,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class FamiliaDetalheTest {
 
     @Autowired MockMvc mvc;
-    @Autowired
-    FamiliaRepositorio familias;
+    @Autowired FamiliaRepositorio familias;
     @Autowired ComunidadeRepositorio comunidades;
     @Autowired MunicipioRepositorio municipios;
     @Autowired UsuarioRepositorio usuarios;

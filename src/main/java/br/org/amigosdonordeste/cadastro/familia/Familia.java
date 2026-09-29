@@ -86,6 +86,16 @@ public class Familia {
     @Column(columnDefinition = "text")
     private String observacoes;
 
+    /**
+     * Issue #43: familia nao se apaga, se inativa. Inativa some de listagem,
+     * relatorio, contagem e mapa, mas continua no banco e pode voltar. Sem
+     * setter: muda so por inativar()/reativar().
+     */
+    @Column(nullable = false)
+    @Setter(AccessLevel.NONE)
+    @Builder.Default
+    private boolean ativa = true;
+
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm;
 
@@ -104,6 +114,14 @@ public class Familia {
     @PreUpdate
     private void aoAtualizar() {
         atualizadoEm = OffsetDateTime.now();
+    }
+
+    public void inativar() {
+        ativa = false;
+    }
+
+    public void reativar() {
+        ativa = true;
     }
 
     public void adicionarPessoa(Pessoa pessoa) {
