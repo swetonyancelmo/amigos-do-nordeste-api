@@ -119,7 +119,7 @@ Rastreabilidade: cada linha aponta para a origem e para a tela do Figma.
 | RF-04 | Registrar moradia e fontes de renda da família | Mensagem 25/08 | 03 | Modelado |
 | RF-05 | Exportar dados para Excel | Reunião 26/08 + form (backup frágil) | 02, 04 | A fazer |
 | RF-06 | Imprimir a lista por comunidade | Reunião 26/08 | 04 | A fazer |
-| RF-07 | Ver as comunidades atendidas em mapa | Ideia do grupo | 01 | Implementado (API) |
+| RF-07 | Ver as comunidades atendidas em mapa | Ideia do grupo | 01 | Parcial: comunidade guarda lat/long; falta a rota do mapa e a tela |
 | RF-08 | Relatório de situação das famílias para doador e prefeitura | Mensagem 25/08 | 04 | Implementado |
 | RF-09 | Marcar cadastro como incompleto e voltar depois | Análise da lista manuscrita | 03 | Modelado |
 | RF-10 | Cadastro de voluntários com disponibilidade | Formulário 31/08 | — | **Proposto, ver Q-04** |
