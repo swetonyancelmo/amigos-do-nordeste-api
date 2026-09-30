@@ -1,4 +1,4 @@
-package br.org.amigosdonordeste.cadastro.familia.request;
+package br.org.amigosdonordeste.cadastro.pessoa.request;
 
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Parentesco;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Serie;
@@ -7,9 +7,13 @@ import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 
 import java.time.LocalDate;
 
-/** O que POST e PUT têm em comum na pessoa — tudo menos o id. */
-public sealed interface CamposPessoa
-        permits CriarFamiliaRequisicao.CriarPessoa, AtualizarFamiliaRequisicao.AtualizarPessoa {
+/**
+ * Os campos de pessoa que todo caminho de escrita recebe — o payload da
+ * família (POST/PUT /api/familias) e a tela de pessoa (POST
+ * /api/familias/{familiaId}/pessoas, PUT /api/pessoas/{id}). Todos passam pelo
+ * mesmo PessoaService.aplicarCampos: é o que impede os caminhos de divergirem.
+ */
+public interface CamposPessoa {
     String nome();
     Boolean cadastroIncompleto();
     Sexo sexo();
