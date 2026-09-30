@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
@@ -44,6 +45,7 @@ import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
+import br.org.amigosdonordeste.cadastro.pessoa.PessoaService;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Serie;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
 
@@ -55,6 +57,12 @@ class FamiliaServiceTest {
 
     @Mock
     private ComunidadeRepositorio comunidadeRepositorio;
+
+    // real, não mock: as regras de pessoa do payload da família moram nele,
+    // e estes testes são justamente sobre elas. Os repositórios dele não são
+    // usados por aplicarCampos/removerDaFamilia.
+    @Spy
+    private PessoaService pessoaService = new PessoaService(null, null);
 
     @InjectMocks
     private FamiliaService familiaService;

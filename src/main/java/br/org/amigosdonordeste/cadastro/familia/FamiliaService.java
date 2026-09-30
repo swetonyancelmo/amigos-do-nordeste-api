@@ -1,6 +1,5 @@
 package br.org.amigosdonordeste.cadastro.familia;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,23 +18,21 @@ import br.org.amigosdonordeste.cadastro.comum.dto.PaginaResposta;
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
 import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
-import br.org.amigosdonordeste.cadastro.dominio.NumerosCalcado;
 import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaFiltroDTO;
 import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadException;
-import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
-import br.org.amigosdonordeste.cadastro.familia.exception.NumeroCalcadoInvalidoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
 import br.org.amigosdonordeste.cadastro.familia.request.AtualizarFamiliaRequisicao;
 import br.org.amigosdonordeste.cadastro.familia.request.AtualizarFamiliaRequisicao.AtualizarFonteRenda;
 import br.org.amigosdonordeste.cadastro.familia.request.AtualizarFamiliaRequisicao.AtualizarPessoa;
 import br.org.amigosdonordeste.cadastro.familia.request.CamposFamilia;
-import br.org.amigosdonordeste.cadastro.familia.request.CamposPessoa;
 import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao;
 import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao.CriarFonteRenda;
 import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao.CriarPessoa;
 import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
+import br.org.amigosdonordeste.cadastro.pessoa.PessoaService;
+import br.org.amigosdonordeste.cadastro.pessoa.PessoaService.Origem;
 
 @Service
 @Transactional
@@ -43,10 +40,14 @@ public class FamiliaService {
 
     private final FamiliaRepositorio familiaRepositorio;
     private final ComunidadeRepositorio comunidadeRepositorio;
+    // campos de pessoa e remoção de membro: a mesma regra da tela de pessoa
+    private final PessoaService pessoaService;
 
-    public FamiliaService(FamiliaRepositorio familiaRepositorio, ComunidadeRepositorio comunidadeRepositorio) {
+    public FamiliaService(FamiliaRepositorio familiaRepositorio, ComunidadeRepositorio comunidadeRepositorio,
+                          PessoaService pessoaService) {
         this.familiaRepositorio = familiaRepositorio;
         this.comunidadeRepositorio = comunidadeRepositorio;
+        this.pessoaService = pessoaService;
     }
 
     /**
@@ -127,7 +128,7 @@ public class FamiliaService {
         List<Pessoa> pessoasNaOrdemDoPayload = new ArrayList<>();
         for (CriarPessoa pessoaRequest : request.pessoas()) {
             Pessoa pessoa = new Pessoa();
-            aplicarCamposPessoa(pessoa, pessoaRequest);
+            pessoaService.aplicarCampos(pessoa, pessoaRequest, Origem.PAYLOAD_DA_FAMILIA);
             familia.adicionarPessoa(pessoa);
             pessoasNaOrdemDoPayload.add(pessoa);
         }
@@ -164,29 +165,24 @@ public class FamiliaService {
         for (AtualizarPessoa pessoaRequest : request.pessoas()) {
             if (pessoaRequest.id() != null && pessoasAtuaisPorId.containsKey(pessoaRequest.id())) {
                 Pessoa existente = pessoasAtuaisPorId.get(pessoaRequest.id());
-                aplicarCamposPessoa(existente, pessoaRequest);
+                pessoaService.aplicarCampos(existente, pessoaRequest, Origem.PAYLOAD_DA_FAMILIA);
                 idsQueContinuam.add(existente.getId());
             } else {
                 // id nulo ou de pessoa que não é desta família: cria nova, sem
                 // aproveitar o id — é o que impede o JPA de "mover" uma pessoa
                 // de outra família pra cá
                 Pessoa nova = new Pessoa();
-                aplicarCamposPessoa(nova, pessoaRequest);
+                pessoaService.aplicarCampos(nova, pessoaRequest, Origem.PAYLOAD_DA_FAMILIA);
                 familia.adicionarPessoa(nova);
             }
         }
 
-        // pessoa removida: desliga a fonte de renda dela antes (pessoa_id =
-        // null) em vez de deixar o orphanRemoval tentar apagar a fonte junto
+        // pessoa removida: a fonte de renda dela fica com a família (pessoa_id
+        // = null) — mesma regra do DELETE /api/pessoas/{id}
         familia.getPessoas().stream()
                 .filter(p -> p.getId() != null && !idsQueContinuam.contains(p.getId()))
                 .toList()
-                .forEach(pessoaRemovida -> {
-                    familia.getFontesRenda().stream()
-                            .filter(f -> pessoaRemovida.equals(f.getPessoa()))
-                            .forEach(f -> f.setPessoa(null));
-                    familia.removerPessoa(pessoaRemovida);
-                });
+                .forEach(pessoaRemovida -> pessoaService.removerDaFamilia(familia, pessoaRemovida));
 
         Map<UUID, FonteRenda> fontesAtuaisPorId = new HashMap<>();
         for (FonteRenda fonte : familia.getFontesRenda()) {
@@ -297,54 +293,5 @@ public class FamiliaService {
             return null;
         }
         return valor.replaceAll("\\D", "");
-    }
-
-    private void aplicarCamposPessoa(Pessoa pessoa, CamposPessoa request) {
-    pessoa.setNome(request.nome());
-    pessoa.setSexo(request.sexo());
-    pessoa.setDataNascimento(request.dataNascimento());
-    Integer idadeEstimadaAnterior = pessoa.getIdadeEstimada();
-    LocalDate idadeEstimadaEmAnterior = pessoa.getIdadeEstimadaEm();
-    pessoa.setIdadeEstimada(request.idadeEstimada());
-
-    // Regra da issue #14: idadeEstimada sem idadeEstimadaEm -> usa hoje.
-    // No PUT, se a estimativa não mudou e a data veio omitida, mantém a data
-    // já gravada — senão "30 anos em 2024" viraria "30 anos em 2026" a cada
-    // salvamento e a idade calculada regrediria.
-    LocalDate dataEstimativa = request.idadeEstimadaEm();
-    if (request.idadeEstimada() != null && dataEstimativa == null) {
-        boolean estimativaInalterada = request.idadeEstimada().equals(idadeEstimadaAnterior)
-                && idadeEstimadaEmAnterior != null;
-        dataEstimativa = estimativaInalterada ? idadeEstimadaEmAnterior : LocalDate.now();
-    }
-    pessoa.setIdadeEstimadaEm(dataEstimativa);
-
-    // Espelha o chk_pessoa_idade: sem data de nascimento, os dois campos de
-    // estimativa têm que vir juntos (o auto-preenchimento acima já cobre um
-    // lado; aqui pegamos o caso de vir só a data, sem a idade).
-    if (pessoa.getDataNascimento() == null
-            && (pessoa.getIdadeEstimada() == null) != (pessoa.getIdadeEstimadaEm() == null)) {
-        throw new IdadeEstimadaInvalidaException();
-    }
-
-    pessoa.setParentesco(request.parentesco());
-    pessoa.setEstuda(request.estuda());
-    pessoa.setSerie(request.serie());
-    pessoa.setTamanhoRoupa(request.tamanhoRoupa());
-
-    if (request.numeroCalcado() != null && !NumerosCalcado.ehValido(request.numeroCalcado())) {
-        throw new NumeroCalcadoInvalidoException(request.numeroCalcado());
-    }
-    pessoa.setNumeroCalcado(request.numeroCalcado());
-
-    pessoa.setGestante(request.gestante());
-    pessoa.setObservacoes(request.observacoes());
-
-    // RF-09: marca como incompleto se faltar nome ou faltar toda informação
-    // de idade — além de respeitar se o cliente já mandou true explicitamente.
-    // ASSUNÇÃO: confirma com quem escreveu a RF-09 se é exatamente essa a regra.
-    boolean semNome = request.nome() == null || request.nome().isBlank();
-    boolean semIdadeAlguma = pessoa.getDataNascimento() == null && pessoa.getIdadeEstimada() == null;
-    pessoa.setCadastroIncompleto(semNome || semIdadeAlguma || Boolean.TRUE.equals(request.cadastroIncompleto()));
     }
 }

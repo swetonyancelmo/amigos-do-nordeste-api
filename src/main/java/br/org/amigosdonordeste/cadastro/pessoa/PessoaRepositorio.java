@@ -1,13 +1,39 @@
 package br.org.amigosdonordeste.cadastro.pessoa;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
-public interface PessoaRepositorio extends JpaRepository<Pessoa, UUID> {
+public interface PessoaRepositorio extends JpaRepository<Pessoa, UUID>, JpaSpecificationExecutor<Pessoa> {
+
+    /**
+     * GET /api/pessoas: cada linha mostra família, comunidade e município.
+     * Tudo ManyToOne, então dá para trazer junto na própria consulta paginada
+     * (sem o problema de paginar join fetch de coleção) — e sem N+1. O count
+     * ignora o grafo.
+     */
+    @Override
+    @EntityGraph(attributePaths = {"familia", "familia.comunidade", "familia.comunidade.municipio"})
+    Page<Pessoa> findAll(Specification<Pessoa> spec, Pageable pageable);
+
+    /** GET /api/pessoas/{id}: a pessoa com família, comunidade e município. */
+    @Query("""
+        select p from Pessoa p
+        join fetch p.familia f
+        join fetch f.comunidade c
+        join fetch c.municipio
+        where p.id = :id
+        """)
+    Optional<Pessoa> buscarDetalhePorId(@Param("id") UUID id);
 
     List<Pessoa> findByFamiliaId(UUID familiaId);
 

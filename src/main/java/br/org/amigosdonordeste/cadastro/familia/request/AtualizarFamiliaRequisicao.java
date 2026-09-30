@@ -6,6 +6,7 @@ import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Parentesco;
+import br.org.amigosdonordeste.cadastro.pessoa.request.CamposPessoa;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Serie;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
@@ -55,7 +56,7 @@ public record AtualizarFamiliaRequisicao(
             Boolean estuda,
             Serie serie,
             TamanhoRoupa tamanhoRoupa,
-            // validado contra NumerosCalcado.VALORES no FamiliaService
+            // validado contra NumerosCalcado.VALORES no PessoaService
             String numeroCalcado,
             Boolean gestante,
             String observacoes
