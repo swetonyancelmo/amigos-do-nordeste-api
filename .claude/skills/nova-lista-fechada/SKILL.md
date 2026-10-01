@@ -72,5 +72,8 @@ documente isso.
   exatamente o que mudou para a outra equipe.
 - Todo campo coletado precisa aparecer em algum relatório ou filtro.
 
-Pendências conhecidas: `Parentesco` ainda não está em `/api/metadados`, e
-`Sexo` é `FEMININO`/`MASCULINO` aqui, enquanto web e app usam `F`/`M`.
+Pendência conhecida: `Parentesco` ainda não está em `/api/metadados`.
+
+Exemplo de compatibilidade temporária: `PreCadastroService.comSexoPorExtenso`
+aceita o `F`/`M` dos APKs antigos só no pré-cadastro, sem abrir o enum `Sexo`
+para as outras rotas.
