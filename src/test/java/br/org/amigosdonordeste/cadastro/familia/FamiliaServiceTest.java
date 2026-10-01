@@ -85,12 +85,12 @@ class FamiliaServiceTest {
                 4, LocalDate.of(2026, 9, 4), null, true, Serie.PRE, null, null, null, null);
 
         CriarFonteRenda fonte = new CriarFonteRenda(
-                TipoFonteRenda.BOLSA_FAMILIA, null, FaixaRenda.ATE_1_SALARIO, null);
+                TipoFonteRenda.BOLSA_FAMILIA, null, null);
 
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria Rizeuda da Silva", null, null,
                 "Perto da igreja", true, EscoamentoSanitario.FOSSA_RUDIMENTAR,
-                TratamentoAgua.SEM_TRATAMENTO, Set.of(AbastecimentoAgua.CISTERNA),
+                TratamentoAgua.SEM_TRATAMENTO, Set.of(AbastecimentoAgua.CISTERNA), FaixaRenda.ATE_1_SALARIO,
                 List.of(pessoa), List.of(fonte), null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
@@ -103,6 +103,8 @@ class FamiliaServiceTest {
         assertEquals(1, resposta.totais().totalPessoas());
         assertEquals(1, resposta.totais().totalFontesRenda());
         assertEquals(1, resposta.totais().totalPessoasEstudando());
+        // a faixa é da família, não da fonte (V14)
+        assertEquals(FaixaRenda.ATE_1_SALARIO, resposta.faixaRenda());
     }
 
     @Test
@@ -114,14 +116,14 @@ class FamiliaServiceTest {
                 "Antônio", null, Sexo.MASCULINO, null, 70, LocalDate.now(), null, null, null, null, null, null, null);
 
         CriarFonteRenda bolsaDaFamilia = new CriarFonteRenda(
-                TipoFonteRenda.BOLSA_FAMILIA, null, FaixaRenda.ATE_1_SALARIO, null);
+                TipoFonteRenda.BOLSA_FAMILIA, null, null);
         CriarFonteRenda aposentadoriaDoAntonio = new CriarFonteRenda(
-                TipoFonteRenda.APOSENTADORIA, 1, FaixaRenda.ATE_1_SALARIO, null);
+                TipoFonteRenda.APOSENTADORIA, 1, null);
 
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Josefa", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(josefa, antonio), List.of(bolsaDaFamilia, aposentadoriaDoAntonio), null);
+                Set.of(), null, List.of(josefa, antonio), List.of(bolsaDaFamilia, aposentadoriaDoAntonio), null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
         when(familiaRepositorio.save(any(Familia.class))).thenAnswer(chamada -> {
@@ -143,12 +145,12 @@ class FamiliaServiceTest {
     @DisplayName("fontesRenda.pessoaIndice fora de pessoas[] é rejeitado")
     void rejeitaPessoaIndiceForaDoPayload() {
         CriarFonteRenda fonte = new CriarFonteRenda(
-                TipoFonteRenda.BOLSA_FAMILIA, 0, FaixaRenda.ATE_1_SALARIO, null);
+                TipoFonteRenda.BOLSA_FAMILIA, 0, null);
 
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(), List.of(fonte), null);
+                Set.of(), null, List.of(), List.of(fonte), null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
 
@@ -163,7 +165,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeInexistente, "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(), List.of(), null);
+                Set.of(), null, List.of(), List.of(), null);
 
         when(comunidadeRepositorio.findById(comunidadeInexistente)).thenReturn(Optional.empty());
 
@@ -180,7 +182,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(pessoa), List.of(), null);
+                Set.of(), null, List.of(pessoa), List.of(), null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
 
@@ -197,7 +199,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(pessoa), List.of(), null);
+                Set.of(), null, List.of(pessoa), List.of(), null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
 
@@ -213,7 +215,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(pessoaSemNadaQuaseNada), List.of(), null);
+                Set.of(), null, List.of(pessoaSemNadaQuaseNada), List.of(), null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
         when(familiaRepositorio.save(any(Familia.class))).thenAnswer(chamada -> chamada.getArgument(0));
@@ -234,7 +236,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao requestQualquer = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(), List.of(), null);
+                Set.of(), null, List.of(), List.of(), null);
 
         assertThrows(FamiliaNaoEncontradaException.class,
                 () -> familiaService.atualizar(idInexistente, requestQualquer));
@@ -269,7 +271,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(anaComNomeAtualizado, brunoIntacto), List.of(), null);
+                Set.of(), null, List.of(anaComNomeAtualizado, brunoIntacto), List.of(), null);
 
         FamiliaResponse resposta = familiaService.atualizar(familiaExistente.getId(), request);
 
@@ -306,7 +308,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(brunoIntacto), List.of(), null);
+                Set.of(), null, List.of(brunoIntacto), List.of(), null);
 
         FamiliaResponse resposta = familiaService.atualizar(familiaExistente.getId(), request);
 
@@ -329,7 +331,6 @@ class FamiliaServiceTest {
         FonteRenda aposentadoria = new FonteRenda();
         aposentadoria.setId(UUID.randomUUID());
         aposentadoria.setTipo(TipoFonteRenda.APOSENTADORIA);
-        aposentadoria.setFaixa(FaixaRenda.DE_1_A_2_SALARIOS);
         aposentadoria.setPessoa(avo);
         familiaExistente.adicionarFonteRenda(aposentadoria);
 
@@ -339,12 +340,12 @@ class FamiliaServiceTest {
 
         // avô sumiu do payload; a fonte continua, mas sem pessoaId
         AtualizarFonteRenda fonteSemPessoa = new AtualizarFonteRenda(
-                aposentadoria.getId(), TipoFonteRenda.APOSENTADORIA, null, FaixaRenda.DE_1_A_2_SALARIOS, null);
+                aposentadoria.getId(), TipoFonteRenda.APOSENTADORIA, null, null);
 
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(), List.of(fonteSemPessoa), null);
+                Set.of(), null, List.of(), List.of(fonteSemPessoa), null);
 
         FamiliaResponse resposta = familiaService.atualizar(familiaExistente.getId(), request);
 
@@ -365,7 +366,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(primeira, segunda), List.of(), null);
+                Set.of(), null, List.of(primeira, segunda), List.of(), null);
 
         assertThrows(IdDuplicadoNoPayloadException.class,
                 () -> familiaService.atualizar(UUID.randomUUID(), request));
@@ -383,12 +384,12 @@ class FamiliaServiceTest {
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
 
         AtualizarFonteRenda fonteDePessoaAlheia = new AtualizarFonteRenda(
-                null, TipoFonteRenda.APOSENTADORIA, UUID.randomUUID(), FaixaRenda.ATE_1_SALARIO, null);
+                null, TipoFonteRenda.APOSENTADORIA, UUID.randomUUID(), null);
 
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(), List.of(fonteDePessoaAlheia), null);
+                Set.of(), null, List.of(), List.of(fonteDePessoaAlheia), null);
 
         assertThrows(PessoaReferenciadaInvalidaException.class,
                 () -> familiaService.atualizar(familiaExistente.getId(), request));
@@ -404,7 +405,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", "000.000.000-00", null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(), List.of(), null);
+                Set.of(), null, List.of(), List.of(), null);
 
         FamiliaResponse resposta = familiaService.criar(request);
 
@@ -436,7 +437,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), List.of(mesmaIdadeSemData), List.of(), null);
+                Set.of(), null, List.of(mesmaIdadeSemData), List.of(), null);
 
         familiaService.atualizar(familiaExistente.getId(), request);
 

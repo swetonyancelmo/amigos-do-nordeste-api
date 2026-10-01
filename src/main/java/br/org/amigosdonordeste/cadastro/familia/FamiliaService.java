@@ -136,7 +136,6 @@ public class FamiliaService {
         for (CriarFonteRenda fonteRequest : request.fontesRenda()) {
             FonteRenda fonte = new FonteRenda();
             fonte.setTipo(fonteRequest.tipo());
-            fonte.setFaixa(fonteRequest.faixa());
             fonte.setObservacao(fonteRequest.observacao());
             fonte.setPessoa(resolverPessoaPorIndice(fonteRequest.pessoaIndice(), pessoasNaOrdemDoPayload));
             familia.adicionarFonteRenda(fonte);
@@ -196,14 +195,12 @@ public class FamiliaService {
             if (fonteRequest.id() != null && fontesAtuaisPorId.containsKey(fonteRequest.id())) {
                 FonteRenda existente = fontesAtuaisPorId.get(fonteRequest.id());
                 existente.setTipo(fonteRequest.tipo());
-                existente.setFaixa(fonteRequest.faixa());
                 existente.setObservacao(fonteRequest.observacao());
                 existente.setPessoa(pessoaDaFonte);
                 idsFontesQueContinuam.add(existente.getId());
             } else {
                 FonteRenda nova = new FonteRenda();
                 nova.setTipo(fonteRequest.tipo());
-                nova.setFaixa(fonteRequest.faixa());
                 nova.setObservacao(fonteRequest.observacao());
                 nova.setPessoa(pessoaDaFonte);
                 familia.adicionarFonteRenda(nova);
@@ -279,6 +276,7 @@ public class FamiliaService {
         familia.setTemBanheiro(request.temBanheiro());
         familia.setEscoamentoSanitario(request.escoamentoSanitario());
         familia.setTratamentoAgua(request.tratamentoAgua());
+        familia.setFaixaRenda(request.faixaRenda());
         familia.setObservacoes(request.observacoes());
 
         familia.getAbastecimentoAgua().clear();

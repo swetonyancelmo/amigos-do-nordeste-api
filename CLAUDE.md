@@ -31,7 +31,7 @@ Auth e boa parte do domínio já estão prontos. Cada pacote em
 | `comum` | `/api/saude` | erros (`ManipuladorDeErros`), `PaginaResposta`, `LimitadorPorIp` |
 | `dominio` | — | `Idade` (cálculo com idade estimada datada), `NumerosCalcado`, `Rotulavel` |
 
-Migrações Flyway: V1 a V13 (a próxima é `V14__…`).
+Migrações Flyway: V1 a V14 (a próxima é `V15__…`).
 
 **Ainda não existem:** rota de mapa (`/api/relatorios/mapa`, citada pelo web)
 e exportação para Excel (RF-05).

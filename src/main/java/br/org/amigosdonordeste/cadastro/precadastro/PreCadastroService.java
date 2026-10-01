@@ -359,6 +359,7 @@ public class PreCadastroService {
             complemento.escoamentoSanitario(),
             complemento.tratamentoAgua(),
             complemento.abastecimentoAgua(),
+            complemento.faixaRenda(),
             pessoas,
             complemento.fontesRenda() == null ? List.of() : complemento.fontesRenda(),
             complemento.observacoes());

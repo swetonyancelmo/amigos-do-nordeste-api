@@ -4,6 +4,7 @@ import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao.CriarFonteRenda;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Parentesco;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Serie;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
@@ -41,6 +42,9 @@ public record AprovarPreCadastroRequisicao(
     TratamentoAgua tratamentoAgua,
     Set<AbastecimentoAgua> abastecimentoAgua,
 
+    @Schema(description = "Quanto entra na casa, somando todas as fontes. É da família, não de cada fonte (ADR-0003)")
+    FaixaRenda faixaRenda,
+
     @Schema(description = "pessoaIndice é a posição na lista de pessoas do payload original, como no POST /api/familias")
     @Valid List<@NotNull CriarFonteRenda> fontesRenda,
 
@@ -65,6 +69,6 @@ public record AprovarPreCadastroRequisicao(
 
     /** Corpo ausente ou {} — aprovar sem completar nada. */
     public static AprovarPreCadastroRequisicao vazia() {
-        return new AprovarPreCadastroRequisicao(null, null, null, null, null, null, null, null, null);
+        return new AprovarPreCadastroRequisicao(null, null, null, null, null, null, null, null, null, null);
     }
 }

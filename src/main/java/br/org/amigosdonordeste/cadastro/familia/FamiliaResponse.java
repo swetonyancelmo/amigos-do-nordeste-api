@@ -3,6 +3,7 @@ package br.org.amigosdonordeste.cadastro.familia;
 import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 
 import java.util.List;
 import java.util.Set;
@@ -19,6 +20,7 @@ public record FamiliaResponse(
         EscoamentoSanitario escoamentoSanitario,
         TratamentoAgua tratamentoAgua,
         Set<AbastecimentoAgua> abastecimentoAgua,
+        FaixaRenda faixaRenda,
         List<PessoaResponse> pessoas,
         List<FonteRendaResponse> fontesRenda,
         String observacoes,
@@ -51,6 +53,7 @@ public record FamiliaResponse(
                 familia.getEscoamentoSanitario(),
                 familia.getTratamentoAgua(),
                 familia.getAbastecimentoAgua(),
+                familia.getFaixaRenda(),
                 pessoas,
                 fontes,
                 familia.getObservacoes(),

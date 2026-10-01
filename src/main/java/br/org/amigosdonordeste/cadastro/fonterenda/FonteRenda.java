@@ -1,7 +1,6 @@
 package br.org.amigosdonordeste.cadastro.fonterenda;
 
 import br.org.amigosdonordeste.cadastro.familia.Familia;
-import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 import jakarta.persistence.*;
@@ -44,10 +43,6 @@ public class FonteRenda {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pessoa_id")
     private Pessoa pessoa;
-
-    @Enumerated(EnumType.STRING)
-    @Column(length = 30)
-    private FaixaRenda faixa;
 
     @Column(columnDefinition = "text")
     private String observacao;

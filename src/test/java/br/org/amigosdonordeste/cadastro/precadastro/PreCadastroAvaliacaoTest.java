@@ -154,7 +154,8 @@ class PreCadastroAvaliacaoTest {
           "escoamentoSanitario": "FOSSA_RUDIMENTAR",
           "tratamentoAgua": "SEM_TRATAMENTO",
           "temBanheiro": true,
-          "fontesRenda": [ { "tipo": "BOLSA_FAMILIA", "pessoaIndice": null, "faixa": "ATE_1_SALARIO" } ],
+          "faixaRenda": "ATE_1_SALARIO",
+          "fontesRenda": [ { "tipo": "BOLSA_FAMILIA", "pessoaIndice": null } ],
           "pessoas": [
             { "indice": 0, "parentesco": "RESPONSAVEL", "estuda": false,
               "serie": null, "tamanhoRoupa": "ADULTO_G", "numeroCalcado": "38/39", "gestante": false },
@@ -188,6 +189,7 @@ class PreCadastroAvaliacaoTest {
             .andExpect(jsonPath("$.pessoas", hasSize(2)))
             .andExpect(jsonPath("$.fontesRenda", hasSize(1)))
             .andExpect(jsonPath("$.fontesRenda[0].tipo").value("BOLSA_FAMILIA"))
+            .andExpect(jsonPath("$.faixaRenda").value("ATE_1_SALARIO"))
             .andExpect(jsonPath("$.totais.totalPessoas").value(2))
             .andReturn().getResponse().getContentAsString();
         UUID familiaId = UUID.fromString(JsonPath.read(resposta, "$.id"));

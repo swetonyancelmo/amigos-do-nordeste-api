@@ -5,6 +5,7 @@ import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -82,6 +83,14 @@ public class Familia {
     @Setter(AccessLevel.NONE)
     @Builder.Default
     private List<FonteRenda> fontesRenda = new ArrayList<>();
+
+    /**
+     * Quanto entra na casa, somando todas as fontes. É da família, não de cada
+     * fonte: faixa não se soma (ADR-0003). As fontes dizem só de onde vem.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "faixa_renda", length = 30)
+    private FaixaRenda faixaRenda;
 
     @Column(columnDefinition = "text")
     private String observacoes;

@@ -38,6 +38,8 @@ public record AtualizarFamiliaRequisicao(
         EscoamentoSanitario escoamentoSanitario,
         TratamentoAgua tratamentoAgua,
         Set<AbastecimentoAgua> abastecimentoAgua,
+        // a renda da casa inteira; as fontes dizem só de onde ela vem (ADR-0003)
+        FaixaRenda faixaRenda,
         @NotNull @Valid List<AtualizarPessoa> pessoas,
         @NotNull @Valid List<AtualizarFonteRenda> fontesRenda,
         String observacoes
@@ -70,7 +72,6 @@ public record AtualizarFamiliaRequisicao(
             // id de uma pessoa que já existe nesta família e continua em
             // pessoas[]. null = fonte da família.
             UUID pessoaId,
-            FaixaRenda faixa,
             String observacao
     ) {
     }
