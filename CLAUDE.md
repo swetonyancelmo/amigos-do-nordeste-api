@@ -115,3 +115,10 @@ mvn test -Dtest=PreCadastroTest       # um teste só
 ```
 
 Swagger em `http://localhost:3333/swagger-ui.html`.
+
+## Skills
+
+Em `.claude/skills/`: `rodar-api-local` (subir, criar conta, dados de teste com
+`scripts/semear.sh`, curl), `novo-endpoint-api`, `nova-migracao-flyway`,
+`nova-lista-fechada` e `preparar-pr-api`. Mudanças que o web ou o app consomem:
+skill `mudanca-de-contrato`, na pasta que agrupa os três repositórios.
