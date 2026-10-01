@@ -2,6 +2,7 @@ package br.org.amigosdonordeste.cadastro.config;
 
 import br.org.amigosdonordeste.cadastro.agente.FiltroTokenAgente;
 import br.org.amigosdonordeste.cadastro.auth.FiltroJwt;
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -72,6 +73,11 @@ public class SegurancaConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(rotas -> rotas
+                // O redespacho para /error (404, 405, 403, 500) chega sem
+                // autenticacao — a sessao e STATELESS. Se exigisse ADMIN, todo
+                // erro viraria 401 e o cliente acharia que a sessao caiu. A
+                // requisicao original ja passou pela regra de acesso.
+                .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 // Trancado por padrao, aberto por excecao — nunca o contrario.
                 // Toda rota nova ja nasce ADMIN sem voce fazer nada.
                 .requestMatchers(
