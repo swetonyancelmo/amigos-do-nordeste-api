@@ -61,7 +61,9 @@ app:
   # Em produção precisa ser true (o cookie só viaja em HTTPS).
   cookie-seguro: ${APP_COOKIE_SEGURO:false}
   usuario-inicial:
-    email: swetony@gmail.com
+    # Sem padrao de proposito: o perfil criar-usuario recusa rodar sem
+    # APP_USUARIO_INICIAL_EMAIL, em vez de criar a conta num e-mail fixo.
+    email: ${APP_USUARIO_INICIAL_EMAIL:}
     nome: ${APP_USUARIO_INICIAL_NOME:Associação Amigos do Nordeste}
 
 logging:
