@@ -89,4 +89,23 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
         """)
     long contarParaRelatorioNecessidades(@Param("comunidadeId") UUID comunidadeId,
                                         @Param("municipioId") UUID municipioId);
+
+    /**
+     * Issue #21: mesmo escopo do relatório de necessidades, mas aqui a família
+     * inteira (join fetch de pessoas) — as abas "Famílias" e "Pessoas" da
+     * planilha precisam dos dados completos, não só da contagem. distinct pelo
+     * mesmo motivo de {@link #buscarDetalhePorId}: join fetch de pessoas
+     * multiplica a linha por membro.
+     */
+    @Query("""
+        select distinct f from Familia f
+        join fetch f.comunidade c
+        join fetch c.municipio
+        left join fetch f.pessoas
+        where (:comunidadeId is null or c.id = :comunidadeId)
+          and (:municipioId is null or c.municipio.id = :municipioId)
+        order by c.nome, f.responsavelNome
+        """)
+    List<Familia> buscarParaExportacaoNecessidades(@Param("comunidadeId") UUID comunidadeId,
+                                                   @Param("municipioId") UUID municipioId);
 }

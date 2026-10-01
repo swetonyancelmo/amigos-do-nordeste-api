@@ -24,6 +24,7 @@
     <!-- Sobe a versao que o Spring Boot 3.4 fixa (1.18.36): aquela quebra em JDK
          mais novo com "TypeTag :: UNKNOWN". Esta cobre JDK 21 ate 25. -->
     <lombok.version>1.18.46</lombok.version>
+    <poi.version>5.5.1</poi.version>
   </properties>
 
   <dependencies>
@@ -104,6 +105,12 @@
       <version>${springdoc.version}</version>
     </dependency>
 
+    <!-- Issue #21: exportacao do relatorio de necessidades para .xlsx. -->
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi-ooxml</artifactId>
+      <version>${poi.version}</version>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
