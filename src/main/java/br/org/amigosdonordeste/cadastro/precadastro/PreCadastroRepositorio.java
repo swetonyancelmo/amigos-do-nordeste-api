@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,6 +40,9 @@ public interface PreCadastroRepositorio extends JpaRepository<PreCadastro, UUID>
      * PENDENTE e criariam duas familias; com o lock o segundo espera o
      * primeiro e ve APROVADO.
      */
+    /** Consulta do aparelho: so o que ESTA agente enviou, entre os ids pedidos. */
+    List<PreCadastro> findByAgenteIdAndIdIn(UUID agenteId, Collection<UUID> ids);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from PreCadastro p where p.id = :id")
     Optional<PreCadastro> buscarParaAvaliar(@Param("id") UUID id);

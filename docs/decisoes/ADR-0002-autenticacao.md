@@ -37,7 +37,7 @@ exigiu a coluna de papel que esta ADR já previa (migração `V10`).
 | Credencial | Quem | Papel | O que abre |
 |---|---|---|---|
 | JWT de acesso (login) | usuária do painel | `ADMIN` | tudo, menos enviar pré-cadastro |
-| Token de aparelho (`Bearer agente_…`) | agente de campo | `AGENTE` | **só** `POST /api/pre-cadastros` e `GET /api/comunidades/opcoes` |
+| Token de aparelho (`Bearer agente_…`) | agente de campo | `AGENTE` | **só** `POST /api/pre-cadastros`, `GET /api/pre-cadastros/situacao` e `GET /api/comunidades/opcoes` |
 
 O token do aparelho é opaco (32 bytes aleatórios), nasce da troca de um código
 de convite de uso único e só o **SHA-256** dele fica no banco — sem sal, de
@@ -53,6 +53,20 @@ separada de `GET /api/comunidades` para devolver só id, nome e município:
 líder, telefone do líder e coordenadas não vão para o celular, que pode ser
 perdido. Comunidade é lista fechada, não dado de família — continua valendo
 que nenhuma família sai do servidor para o aparelho.
+
+**Exceção de leitura (01/10/2026): `GET /api/pre-cadastros/situacao`.** Sem
+ela, o app não tinha como saber se o que enviou foi aprovado ou devolvido, e a
+correção pedida pela associação nunca chegava à agente (auditoria de
+integração, SYNC-02). A rota devolve, para os ids que o aparelho pergunta, só
+**id, situação e motivo da devolução**, e só dos pré-cadastros enviados pela
+própria agente do token: id de outra agente ou desconhecido não volta, nem para
+dizer que existe. O motivo é o texto que a associação escreve para a agente
+corrigir; nenhum outro dado de família sai do servidor para o aparelho.
+
+**Convite gerado pelo painel (01/10/2026).** `POST /api/agentes` (ADMIN) cria a
+agente e devolve o código de convite; `POST /api/agentes/{id}/novo-convite` gera
+outro para a mesma agente e derruba o token do aparelho antigo, que é o caminho
+de um celular perdido ou trocado.
 
 ## Decisão
 

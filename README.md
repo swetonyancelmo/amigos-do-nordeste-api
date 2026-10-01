@@ -91,8 +91,10 @@ de cada corpo e resposta está no Swagger.
 
 | Rota | Acesso | O que faz |
 |---|---|---|
-| `POST /api/pre-cadastros` | **agente** | Recebe um pré-cadastro. Idempotente pelo `id` gerado no aparelho: reenvio responde `JA_RECEBIDO`. |
+| `POST /api/pre-cadastros` | **agente** | Recebe um pré-cadastro. Idempotente pelo `id` gerado no aparelho: reenvio responde `JA_RECEBIDO`; um `DEVOLVIDO` reenviado pela mesma agente volta a `PENDENTE` com o payload corrigido. |
+| `GET /api/pre-cadastros/situacao?ids=` | **agente** | Situação do que o próprio aparelho enviou (id, situação e motivo da devolução), até 100 ids. |
 | `GET /api/pre-cadastros?situacao=` | admin | Fila de chamados, com aviso de possível duplicata (mesma comunidade e telefone ou nome parecido). |
+| `GET /api/pre-cadastros/{id}` | admin | Ficha do chamado: o que a agente coletou, com o índice de cada pessoa usado na aprovação. |
 | `POST /api/pre-cadastros/{id}/aprovar` | admin | Vira família, com o complemento opcional de moradia, renda e dados por pessoa. |
 | `POST /api/pre-cadastros/{id}/devolver` | admin | Devolve com motivo obrigatório. |
 

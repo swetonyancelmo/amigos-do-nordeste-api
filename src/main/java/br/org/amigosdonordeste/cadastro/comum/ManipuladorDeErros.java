@@ -28,6 +28,7 @@ import br.org.amigosdonordeste.cadastro.municipio.CodigoIbgeJaCadastradoExceptio
 import br.org.amigosdonordeste.cadastro.municipio.MunicipioNaoEncontradoException;
 import br.org.amigosdonordeste.cadastro.pessoa.exception.PessoaInvalidaException;
 import br.org.amigosdonordeste.cadastro.pessoa.exception.PessoaNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.precadastro.MuitosIdsException;
 import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroInvalidoException;
 import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroJaAvaliadoException;
 import br.org.amigosdonordeste.cadastro.precadastro.PreCadastroNaoEncontradoException;
@@ -123,6 +124,11 @@ public class ManipuladorDeErros {
 
     @ExceptionHandler(PreCadastroInvalidoException.class)
     public ResponseEntity<ErroResposta> preCadastroInvalido(PreCadastroInvalidoException e) {
+        return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(MuitosIdsException.class)
+    public ResponseEntity<ErroResposta> muitosIds(MuitosIdsException e) {
         return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 

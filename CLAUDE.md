@@ -27,15 +27,14 @@ Auth e boa parte do domínio já estão prontos. Cada pacote em
 | `metadados` | `/api/metadados` (público) | todas as listas fechadas com rótulo |
 | `relatorio` | `/api/relatorios/{necessidades,situacao}` | roupa/calçado por tamanho; indicadores de situação |
 | `agente` | `/api/agentes`, `/api/agentes/{id}/novo-convite`, `/api/agentes/ativar` (público, com limite por IP) | painel cadastra a agente e gera o convite; o aparelho troca o código pelo token |
-| `precadastro` | `/api/pre-cadastros` | agente envia (idempotente); admin lista, aprova (vira família) ou devolve |
+| `precadastro` | `/api/pre-cadastros`, `/api/pre-cadastros/situacao` | agente envia (idempotente; devolvido reenviado volta à fila) e consulta a situação; admin lista, detalha, aprova (vira família) ou devolve |
 | `comum` | `/api/saude` | erros (`ManipuladorDeErros`), `PaginaResposta`, `LimitadorPorIp` |
 | `dominio` | — | `Idade` (cálculo com idade estimada datada), `NumerosCalcado`, `Rotulavel` |
 
 Migrações Flyway: V1 a V12 (a próxima é `V13__…`).
 
-**Ainda não existem:** rota de mapa (`/api/relatorios/mapa`, citada pelo web),
-exportação para Excel (RF-05) e rota para o aparelho consultar se o
-pré-cadastro foi aprovado ou devolvido.
+**Ainda não existem:** rota de mapa (`/api/relatorios/mapa`, citada pelo web)
+e exportação para Excel (RF-05).
 
 Ao ajudar aqui, **não construa módulos inteiros por iniciativa própria.** O
 time trabalha por issues no Kanban. Faça a tarefa pedida, no tamanho pedido.
@@ -56,9 +55,10 @@ time trabalha por issues no Kanban. Faça a tarefa pedida, no tamanho pedido.
    Nunca o torne público. A primeira conta vem do perfil `criar-usuario`.
 6. **Trancado por padrão**: `anyRequest().hasRole("ADMIN")`. Para abrir uma rota,
    acrescente-a à lista de `permitAll` em `SegurancaConfig`. O token do
-   aparelho da agente (`ROLE_AGENTE`) abre **só** `POST /api/pre-cadastros` e
-   `GET /api/comunidades/opcoes` (lista enxuta, sem dados do líder). As duas
-   estão listadas explicitamente ali e repetidas com `@PreAuthorize`. Nunca dê
+   aparelho da agente (`ROLE_AGENTE`) abre **só** `POST /api/pre-cadastros`,
+   `GET /api/pre-cadastros/situacao` (id, situação e motivo do que ela mesma
+   enviou) e `GET /api/comunidades/opcoes` (lista enxuta, sem dados do líder).
+   As três estão listadas explicitamente ali e repetidas com `@PreAuthorize`. Nunca dê
    mais que isso ao token do aparelho, e nunca dado de família (ADR-0002).
 7. **Data de nascimento é opcional**; existe `idadeEstimada` + `idadeEstimadaEm`
    (os dois juntos ou nenhum, garantido por `CHECK` no banco). Nunca torne a

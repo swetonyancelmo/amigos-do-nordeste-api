@@ -3,6 +3,7 @@ package br.org.amigosdonordeste.cadastro.precadastro;
 import br.org.amigosdonordeste.cadastro.agente.AgenteRepositorio;
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
+import br.org.amigosdonordeste.cadastro.dominio.Idade;
 import br.org.amigosdonordeste.cadastro.familia.Familia;
 import br.org.amigosdonordeste.cadastro.familia.FamiliaRepositorio;
 import br.org.amigosdonordeste.cadastro.familia.FamiliaResponse;
@@ -18,8 +19,10 @@ import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroRequisi
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroRequisicao.PessoaPreCadastro;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroResposta;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.PossivelDuplicata;
+import br.org.amigosdonordeste.cadastro.precadastro.dto.PreCadastroDetalheResposta;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.PreCadastroResumoResposta;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.ResultadoEnvio;
+import br.org.amigosdonordeste.cadastro.precadastro.dto.SituacaoParaAparelho;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,7 +30,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.validation.Validator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.OffsetDateTime;
 import java.util.Comparator;
@@ -35,6 +40,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -42,6 +48,8 @@ import java.util.UUID;
  * fila para o painel.
  *
  * A regra central do recebimento: o mesmo id nunca grava duas vezes e nunca devolve erro.
+ * A unica excecao e o DEVOLVIDO: a agente corrige e reenvia o mesmo id, e ele
+ * volta para a fila com o payload novo (ver reabrirDevolvido).
  * Primeiro se pergunta ao banco se o id ja existe (o caso comum do reenvio);
  * se dois envios do mesmo id chegarem ao mesmo tempo e os dois passarem por
  * essa pergunta, a chave primaria segura o segundo INSERT e ele tambem vira
@@ -60,6 +68,10 @@ public class PreCadastroService {
     private final FamiliaService familiaService;
     private final ObjectMapper json;
     private final Validator validador;
+    private final TransactionTemplate transacao;
+
+    /** Teto da consulta de situacao do aparelho; o app pergunta em lotes. */
+    public static final int MAXIMO_IDS_POR_CONSULTA = 100;
 
     public PreCadastroService(PreCadastroRepositorio preCadastros,
                               AgenteRepositorio agentes,
@@ -67,7 +79,8 @@ public class PreCadastroService {
                               FamiliaRepositorio familias,
                               FamiliaService familiaService,
                               ObjectMapper json,
-                              Validator validador) {
+                              Validator validador,
+                              PlatformTransactionManager transacoes) {
         this.preCadastros = preCadastros;
         this.agentes = agentes;
         this.comunidades = comunidades;
@@ -75,6 +88,7 @@ public class PreCadastroService {
         this.familiaService = familiaService;
         this.json = json;
         this.validador = validador;
+        this.transacao = new TransactionTemplate(transacoes);
     }
 
     /**
@@ -85,8 +99,15 @@ public class PreCadastroService {
     public EnviarPreCadastroResposta receber(UUID agenteId, JsonNode corpo) {
         EnviarPreCadastroRequisicao requisicao = converter(corpo);
 
-        if (preCadastros.existsById(requisicao.id())) {
-            return new EnviarPreCadastroResposta(requisicao.id(), ResultadoEnvio.JA_RECEBIDO);
+        Optional<PreCadastro> existente = preCadastros.findById(requisicao.id());
+        if (existente.isPresent()) {
+            if (existente.get().getSituacao() != SituacaoPreCadastro.DEVOLVIDO) {
+                return new EnviarPreCadastroResposta(requisicao.id(), ResultadoEnvio.JA_RECEBIDO);
+            }
+            // Devolvido e corrigido pela agente: volta para a fila com o
+            // payload novo. Sem isto a correcao virava JA_RECEBIDO e sumia.
+            requisicao.pessoas().forEach(PreCadastroService::validarPessoa);
+            return reabrirDevolvido(agenteId, requisicao, corpo);
         }
 
         requisicao.pessoas().forEach(PreCadastroService::validarPessoa);
@@ -112,6 +133,95 @@ public class PreCadastroService {
         }
 
         return new EnviarPreCadastroResposta(requisicao.id(), ResultadoEnvio.ACEITO);
+    }
+
+    /**
+     * O reenvio de um DEVOLVIDO pela mesma agente: troca o payload, volta a
+     * PENDENTE e limpa a avaliacao. Com lock na linha, como aprovar/devolver:
+     * se a revisora estiver avaliando ao mesmo tempo, um espera o outro. Se
+     * entre a leitura e o lock o pre-cadastro deixou de ser DEVOLVIDO, ou se
+     * o id e de outra agente, nada muda e a resposta e JA_RECEBIDO.
+     */
+    private EnviarPreCadastroResposta reabrirDevolvido(UUID agenteId, EnviarPreCadastroRequisicao requisicao,
+                                                       JsonNode corpo) {
+        ResultadoEnvio resultado = transacao.execute(status -> {
+            PreCadastro preCadastro = preCadastros.buscarParaAvaliar(requisicao.id()).orElseThrow();
+            if (preCadastro.getSituacao() != SituacaoPreCadastro.DEVOLVIDO
+                || !preCadastro.getAgente().getId().equals(agenteId)) {
+                return ResultadoEnvio.JA_RECEBIDO;
+            }
+            preCadastro.setComunidade(requisicao.comunidadeId() == null
+                ? null
+                : comunidades.findById(requisicao.comunidadeId()).orElse(null));
+            preCadastro.setPayload(corpo.toString());
+            preCadastro.setSituacao(SituacaoPreCadastro.PENDENTE);
+            preCadastro.setMotivoDevolucao(null);
+            preCadastro.setAvaliadoEm(null);
+            preCadastro.setRecebidoEm(OffsetDateTime.now());
+            return ResultadoEnvio.ACEITO;
+        });
+        return new EnviarPreCadastroResposta(requisicao.id(), resultado);
+    }
+
+    /**
+     * O aparelho pergunta pelo que enviou: so os pre-cadastros DESTA agente
+     * entre os ids pedidos. Id de outra agente ou desconhecido simplesmente
+     * nao volta — nem para dizer que existe.
+     */
+    @Transactional(readOnly = true)
+    public List<SituacaoParaAparelho> situacaoParaAparelho(UUID agenteId, List<UUID> ids) {
+        if (ids.size() > MAXIMO_IDS_POR_CONSULTA) {
+            throw new MuitosIdsException(MAXIMO_IDS_POR_CONSULTA);
+        }
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return preCadastros.findByAgenteIdAndIdIn(agenteId, ids).stream()
+            .map(p -> new SituacaoParaAparelho(
+                p.getId(),
+                p.getSituacao(),
+                p.getSituacao() == SituacaoPreCadastro.DEVOLVIDO ? p.getMotivoDevolucao() : null))
+            .toList();
+    }
+
+    /** A ficha do chamado para a tela de revisao: o que a agente coletou, com o indice de cada pessoa. */
+    @Transactional(readOnly = true)
+    public PreCadastroDetalheResposta detalhar(UUID id) {
+        PreCadastro preCadastro = preCadastros.findById(id)
+            .orElseThrow(() -> new PreCadastroNaoEncontradoException(id));
+        EnviarPreCadastroRequisicao coletado = converter(lerPayload(preCadastro));
+
+        List<PreCadastroDetalheResposta.PessoaColetada> pessoas = new ArrayList<>();
+        for (int i = 0; i < coletado.pessoas().size(); i++) {
+            PessoaPreCadastro p = coletado.pessoas().get(i);
+            pessoas.add(new PreCadastroDetalheResposta.PessoaColetada(
+                i,
+                p.nome(),
+                Boolean.TRUE.equals(p.cadastroIncompleto()),
+                p.sexo(),
+                p.dataNascimento(),
+                p.idadeEstimada(),
+                p.idadeEstimadaEm(),
+                Idade.calcular(p.dataNascimento(), p.idadeEstimada(), p.idadeEstimadaEm())));
+        }
+
+        Comunidade comunidade = preCadastro.getComunidade();
+        return new PreCadastroDetalheResposta(
+            preCadastro.getId(),
+            preCadastro.getSituacao(),
+            preCadastro.getAgente().getNome(),
+            preCadastro.getRecebidoEm(),
+            preCadastro.getAvaliadoEm(),
+            coletado.criadoEm(),
+            preCadastro.getMotivoDevolucao(),
+            preCadastro.getFamilia() != null ? preCadastro.getFamilia().getId() : null,
+            coletado.responsavelNome(),
+            coletado.telefone(),
+            coletado.pontoReferencia(),
+            comunidade != null ? comunidade.getId() : null,
+            comunidade != null ? comunidade.getNome() : coletado.comunidadeNome(),
+            procurarDuplicata(preCadastro, coletado.responsavelNome(), coletado.telefone()),
+            pessoas);
     }
 
     /**

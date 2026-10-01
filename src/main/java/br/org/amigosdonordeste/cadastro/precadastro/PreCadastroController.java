@@ -6,7 +6,9 @@ import br.org.amigosdonordeste.cadastro.precadastro.dto.AprovarPreCadastroRequis
 import br.org.amigosdonordeste.cadastro.precadastro.dto.DevolverPreCadastroRequisicao;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroRequisicao;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.EnviarPreCadastroResposta;
+import br.org.amigosdonordeste.cadastro.precadastro.dto.PreCadastroDetalheResposta;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.PreCadastroResumoResposta;
+import br.org.amigosdonordeste.cadastro.precadastro.dto.SituacaoParaAparelho;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,10 +34,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * O POST e a unica porta do aparelho da agente. SegurancaConfig ja restringe
- * essa rota a ROLE_AGENTE; o @PreAuthorize repete a regra aqui para ela nao
- * depender so da lista de la. GET, aprovar e devolver sao do painel (ADMIN,
- * o padrao de toda rota).
+ * O POST e o GET /situacao sao as portas do aparelho da agente. SegurancaConfig
+ * ja restringe as duas a ROLE_AGENTE; o @PreAuthorize repete a regra aqui para
+ * ela nao depender so da lista de la. Listar, detalhar, aprovar e devolver sao
+ * do painel (ADMIN, o padrao de toda rota).
  *
  * O corpo do POST chega como JsonNode, nao como o DTO: e o JSON bruto que fica
  * guardado em pre_cadastro.payload. Se o binding fosse direto no record, um
@@ -70,6 +72,40 @@ public class PreCadastroController {
             @io.swagger.v3.oas.annotations.Parameter(description = "Situação da fila; sem ela, lista todas")
             @RequestParam(required = false) SituacaoPreCadastro situacao) {
         return service.listar(situacao);
+    }
+
+    @Operation(summary = "Situação do que o aparelho enviou (aprovado, devolvido e motivo)",
+        description = "Só os pré-cadastros DESTA agente entre os ids pedidos; id de outra agente ou desconhecido "
+            + "não volta. Só id, situação e, quando DEVOLVIDO, o motivo — nenhum dado de família. "
+            + "No máximo " + PreCadastroService.MAXIMO_IDS_POR_CONSULTA + " ids por chamada.",
+        security = @SecurityRequirement(name = "bearer"))
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Situação de cada id encontrado"),
+        @ApiResponse(responseCode = "400", description = "Id fora do formato ou ids demais",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class))),
+        @ApiResponse(responseCode = "401", description = "Token do aparelho ausente ou inválido",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class)))
+    })
+    @GetMapping("/situacao")
+    @PreAuthorize("hasRole('AGENTE')")
+    public List<SituacaoParaAparelho> situacao(@AuthenticationPrincipal String agenteId,
+                                               @RequestParam List<UUID> ids) {
+        return service.situacaoParaAparelho(UUID.fromString(agenteId), ids);
+    }
+
+    @Operation(summary = "Ficha do pré-cadastro para a revisão",
+        description = "O que a agente coletou, com o índice de cada pessoa (é ele que a aprovação usa em "
+            + "pessoas[].indice), mais o aviso de possível duplicata.",
+        security = @SecurityRequirement(name = "bearer"))
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Pré-cadastro encontrado"),
+        @ApiResponse(responseCode = "404", description = "Pré-cadastro não encontrado",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class)))
+    })
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public PreCadastroDetalheResposta detalhar(@PathVariable UUID id) {
+        return service.detalhar(id);
     }
 
     @Operation(summary = "Aprovar: vira família pelo mesmo caminho do POST /api/familias",
@@ -114,7 +150,9 @@ public class PreCadastroController {
 
     @Operation(summary = "Enviar um pré-cadastro do aparelho da agente",
         description = "Idempotente pelo id gerado no aparelho: reenviar o mesmo id responde JA_RECEBIDO "
-            + "com 200 e não cria outro registro. O app trata ACEITO e JA_RECEBIDO como sucesso.",
+            + "com 200 e não cria outro registro. Exceção: um pré-cadastro DEVOLVIDO reenviado pela mesma "
+            + "agente volta a PENDENTE com o payload novo e responde ACEITO. O app trata ACEITO e "
+            + "JA_RECEBIDO como sucesso.",
         security = @SecurityRequirement(name = "bearer"))
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Recebido (ACEITO) ou já estava no servidor (JA_RECEBIDO)"),
