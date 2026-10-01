@@ -10,6 +10,7 @@ import br.org.amigosdonordeste.cadastro.familia.FamiliaService;
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
 import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao;
 import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao.CriarPessoa;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.AprovarPreCadastroRequisicao;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.AprovarPreCadastroRequisicao.ComplementoPessoa;
 import br.org.amigosdonordeste.cadastro.precadastro.dto.DevolverPreCadastroRequisicao;
@@ -22,6 +23,7 @@ import br.org.amigosdonordeste.cadastro.precadastro.dto.ResultadoEnvio;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.validation.Validator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -348,7 +350,7 @@ public class PreCadastroService {
     private EnviarPreCadastroRequisicao converter(JsonNode corpo) {
         EnviarPreCadastroRequisicao requisicao;
         try {
-            requisicao = json.treeToValue(corpo, EnviarPreCadastroRequisicao.class);
+            requisicao = json.treeToValue(comSexoPorExtenso(corpo), EnviarPreCadastroRequisicao.class);
         } catch (IllegalArgumentException | JsonProcessingException e) {
             throw new PreCadastroInvalidoException("Corpo do pré-cadastro inválido: campo com formato errado.");
         }
@@ -358,5 +360,29 @@ public class PreCadastroService {
                 throw new PreCadastroInvalidoException(v.getPropertyPath() + ": " + v.getMessage());
             });
         return requisicao;
+    }
+
+    /**
+     * Compatibilidade com o APK que mandava sexo como "F"/"M" em vez do nome do
+     * enum Sexo. Esses envios eram recusados e continuam na fila dos aparelhos
+     * que ainda não atualizaram; aceitar aqui faz o próximo envio passar sem
+     * reinstalar nada. Vale só para o pré-cadastro: as rotas do painel seguem
+     * aceitando apenas FEMININO/MASCULINO.
+     *
+     * Trabalha numa cópia: o payload gravado continua igual ao que o aparelho
+     * mandou. Pode sair quando nenhum aparelho em campo usar o APK antigo.
+     */
+    private static JsonNode comSexoPorExtenso(JsonNode corpo) {
+        JsonNode copia = corpo.deepCopy();
+        for (JsonNode pessoa : copia.path("pessoas")) {
+            if (pessoa instanceof ObjectNode objeto && pessoa.path("sexo").isTextual()) {
+                switch (pessoa.get("sexo").asText()) {
+                    case "F" -> objeto.put("sexo", Sexo.FEMININO.name());
+                    case "M" -> objeto.put("sexo", Sexo.MASCULINO.name());
+                    default -> { }
+                }
+            }
+        }
+        return copia;
     }
 }

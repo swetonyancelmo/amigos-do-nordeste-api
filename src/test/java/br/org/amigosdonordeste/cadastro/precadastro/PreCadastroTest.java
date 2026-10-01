@@ -239,6 +239,28 @@ class PreCadastroTest {
     }
 
     @Test
+    @DisplayName("sexo F/M do APK antigo é aceito, e o payload guarda o que o aparelho mandou")
+    void sexoAbreviadoDoApkAntigo() throws Exception {
+        UUID id = UUID.randomUUID();
+        String corpo = payload(id, PESSOA_COMPLETA.replace("\"FEMININO\"", "\"F\""));
+
+        mvc.perform(enviar(corpo))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.situacao").value("ACEITO"));
+
+        JsonNode guardado = json.readTree(preCadastros.findById(id).orElseThrow().getPayload());
+        assertEquals("F", guardado.get("pessoas").get(0).get("sexo").asText());
+    }
+
+    @Test
+    @DisplayName("sexo fora da lista continua sendo 400")
+    void sexoForaDaListaE400() throws Exception {
+        String corpo = payload(UUID.randomUUID(), PESSOA_COMPLETA.replace("\"FEMININO\"", "\"Mulher\""));
+
+        mvc.perform(enviar(corpo)).andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("sem id não há como reconhecer o reenvio: 400")
     void semIdERecusado() throws Exception {
         String corpo = payload(UUID.randomUUID(), PESSOA_COMPLETA).replaceFirst("\"id\": \"[^\"]+\",", "");

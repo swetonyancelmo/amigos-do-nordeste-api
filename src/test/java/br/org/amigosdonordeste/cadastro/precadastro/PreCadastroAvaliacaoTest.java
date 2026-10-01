@@ -37,6 +37,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -233,6 +234,20 @@ class PreCadastroAvaliacaoTest {
 
         assertEquals(1, familias.count());
         assertEquals(SituacaoPreCadastro.APROVADO, preCadastros.findById(pendente.getId()).orElseThrow().getSituacao());
+    }
+
+    @Test
+    @DisplayName("pré-cadastro com sexo F/M (APK antigo) aprova com FEMININO/MASCULINO")
+    void aprovarComSexoAbreviado() throws Exception {
+        PreCadastro pendente = salvarPendente(comunidade);
+        pendente.setPayload(pendente.getPayload()
+            .replace("\"FEMININO\"", "\"F\"")
+            .replace("\"MASCULINO\"", "\"M\""));
+        preCadastros.save(pendente);
+
+        mvc.perform(aprovar(pendente.getId(), null))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.pessoas[*].sexo", containsInAnyOrder("FEMININO", "MASCULINO")));
     }
 
     @Test
