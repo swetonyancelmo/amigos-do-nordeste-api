@@ -8,6 +8,7 @@ import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
+import br.org.amigosdonordeste.cadastro.pessoa.enums.Parentesco;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.Serie;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
@@ -22,6 +23,7 @@ public class MetadadosService {
         return new MetadadosResponse(
             opcoes(TipoComunidade.class),
             opcoes(Sexo.class),
+            opcoes(Parentesco.class),
             opcoes(AbastecimentoAgua.class),
             opcoes(EscoamentoSanitario.class),
             opcoes(TratamentoAgua.class),
