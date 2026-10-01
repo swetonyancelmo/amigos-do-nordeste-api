@@ -29,3 +29,17 @@ Havia a suspeita de que o **banco** demoraria a acordar. Está errado:
 Se ainda assim o serviço acabar num host que hiberna, aí sim vale avisar a
 associação de que o primeiro acesso do dia demora — mas isso é o último recurso,
 não o plano.
+
+## Adendo (01/10/2026): o painel fala com a API pelo proxy do Next
+
+O cookie de renovação é `SameSite=Lax` com caminho `/api/auth` (ADR-0002). Com
+o painel e a API em sites diferentes (por exemplo `*.vercel.app` e `*.fly.dev`),
+o navegador não manda esse cookie no `fetch` de `/api/auth/renovar`: cada
+recarga da página deslogaria a usuária. `SameSite=None` também não resolve, por
+causa do bloqueio de cookie de terceiros do Safari e do Chrome.
+
+Decisão: o web chama sempre `/api/...` na **própria origem**, e o `rewrites`
+do `next.config.mjs` repassa para a API (`API_URL`, variável do servidor do
+Next). Para o navegador, painel e API são o mesmo site; o cookie viaja, o
+CORS deixa de entrar no caminho do painel e a API pode ficar em qualquer host.
+O app do celular continua falando direto com a API (`extra.apiUrl`).
