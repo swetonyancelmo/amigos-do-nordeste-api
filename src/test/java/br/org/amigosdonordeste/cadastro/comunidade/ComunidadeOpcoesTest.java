@@ -94,6 +94,6 @@ class ComunidadeOpcoesTest {
             .andExpect(jsonPath("$[1].liderTelefone").doesNotExist())
             .andExpect(jsonPath("$[1].latitude").doesNotExist())
             .andExpect(jsonPath("$[1].longitude").doesNotExist())
-            .andExpect(jsonPath("$[1].observaces").doesNotExist());
+            .andExpect(jsonPath("$[1].observacoes").doesNotExist());
     }
 }

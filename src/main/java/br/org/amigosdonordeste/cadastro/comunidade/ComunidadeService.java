@@ -63,11 +63,11 @@ public class ComunidadeService {
       .nome(request.nome())
       .municipio(municipio)
       .tipo(request.tipoComunidade() != null ? request.tipoComunidade() : TipoComunidade.SITIO)
-      .liderNome(request.liderNome())
-      .liderTelefone(request.liderTelefone())
+      .liderNome(nuloSeVazio(request.liderNome()))
+      .liderTelefone(nuloSeVazio(request.liderTelefone()))
       .latitude(request.latitude())
       .longitude(request.longitude())
-      .observacoes(request.observacoes())
+      .observacoes(nuloSeVazio(request.observacoes()))
       .build();
 
     return ComunidadeResponse.fromEntity(comunidadeRepositorio.save(comunidade));
@@ -81,17 +81,19 @@ public class ComunidadeService {
     comunidade.setNome(request.nome());
     comunidade.setMunicipio(municipio);
     comunidade.setTipo(request.tipoComunidade() != null ? request.tipoComunidade() : comunidade.getTipo());
-    comunidade.setLiderNome(request.liderNome());
-    comunidade.setLiderTelefone(request.liderTelefone());
+    comunidade.setLiderNome(nuloSeVazio(request.liderNome()));
+    comunidade.setLiderTelefone(nuloSeVazio(request.liderTelefone()));
     comunidade.setLatitude(request.latitude());
     comunidade.setLongitude(request.longitude());
-    comunidade.setObservacoes(request.observacoes());
+    comunidade.setObservacoes(nuloSeVazio(request.observacoes()));
 
     // Entidade gerenciada pelo JPA (contexto de persistência aberto) -> o UPDATE
     // é disparado automaticamente no commit da transação, sem precisar de save().
     return ComunidadeResponse.fromEntity(comunidade);
   }
 
-
-
+  /** Campo vazio vindo do formulário vira null, não string vazia. */
+  private static String nuloSeVazio(String valor) {
+    return valor == null || valor.isBlank() ? null : valor.trim();
+  }
 }
