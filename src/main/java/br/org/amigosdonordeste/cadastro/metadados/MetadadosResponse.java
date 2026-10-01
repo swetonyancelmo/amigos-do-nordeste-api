@@ -13,6 +13,7 @@ public record MetadadosResponse(
     List<OpcaoDTO> faixaRenda,
     List<OpcaoDTO> serie,
     List<OpcaoDTO> tamanhoRoupa,
-    List<OpcaoDTO> numeroCalcado
+    List<OpcaoDTO> numeroCalcado,
+    List<OpcaoDTO> situacaoPreCadastro
 ) {
 }

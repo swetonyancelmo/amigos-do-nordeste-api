@@ -30,4 +30,13 @@ class MetadadosTest {
             .andExpect(jsonPath("$.parentesco[*].valor", hasItem("OUTRO_PARENTE")))
             .andExpect(jsonPath("$.parentesco[?(@.valor == 'CONJUGE')].rotulo", hasItem("Cônjuge")));
     }
+
+    @Test
+    @DisplayName("situacao do pre-cadastro esta nos metadados, para o filtro da tela de Chamados")
+    void situacaoPreCadastro() throws Exception {
+        mvc.perform(get("/api/metadados"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.situacaoPreCadastro[*].valor", hasItem("PENDENTE")))
+            .andExpect(jsonPath("$.situacaoPreCadastro[?(@.valor == 'DEVOLVIDO')].rotulo", hasItem("Devolvido")));
+    }
 }
