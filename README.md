@@ -66,6 +66,9 @@ de cada corpo e resposta está no Swagger.
 | `POST /api/auth/trocar-senha` | admin | Troca a senha da própria conta (exige a senha atual). |
 | `POST /api/usuarios` | admin | Cria uma conta de acesso. |
 | `GET /api/usuarios` | admin | Lista as contas. |
+| `POST /api/agentes` | admin | Cadastra a agente e devolve o código de convite de 6 dígitos. |
+| `GET /api/agentes` | admin | Lista as agentes, com o convite ainda pendente. |
+| `POST /api/agentes/{id}/novo-convite` | admin | Código novo para a mesma agente; o aparelho antigo perde o acesso. |
 | `POST /api/agentes/ativar` | pública, 5/min por IP | Troca o código de convite de 6 dígitos pelo token do aparelho. |
 | `GET /api/saude` | pública | Monitoramento e ping para acordar o serviço. |
 | `GET /api/metadados` | pública | Todas as listas fechadas (enums) com rótulo em português. |

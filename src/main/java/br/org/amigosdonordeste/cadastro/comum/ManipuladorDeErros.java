@@ -13,6 +13,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 
+import br.org.amigosdonordeste.cadastro.agente.AgenteNaoEncontradoException;
 import br.org.amigosdonordeste.cadastro.agente.CodigoConviteInvalidoException;
 import br.org.amigosdonordeste.cadastro.auth.CredenciaisInvalidasException;
 import br.org.amigosdonordeste.cadastro.auth.SenhaAtualIncorretaException;
@@ -48,6 +49,11 @@ public class ManipuladorDeErros {
     @ExceptionHandler(CodigoConviteInvalidoException.class)
     public ResponseEntity<ErroResposta> codigoConvite(CodigoConviteInvalidoException e) {
         return resposta(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(AgenteNaoEncontradoException.class)
+    public ResponseEntity<ErroResposta> agenteNaoEncontrado(AgenteNaoEncontradoException e) {
+        return resposta(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
     @ExceptionHandler(MuitasTentativasException.class)

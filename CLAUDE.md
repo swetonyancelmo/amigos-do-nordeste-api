@@ -26,7 +26,7 @@ Auth e boa parte do domínio já estão prontos. Cada pacote em
 | `fonterenda` | — (dentro de família) | entidade e enums de renda |
 | `metadados` | `/api/metadados` (público) | todas as listas fechadas com rótulo |
 | `relatorio` | `/api/relatorios/{necessidades,situacao}` | roupa/calçado por tamanho; indicadores de situação |
-| `agente` | `/api/agentes/ativar` (público, com limite por IP) | troca código de convite por token do aparelho |
+| `agente` | `/api/agentes`, `/api/agentes/{id}/novo-convite`, `/api/agentes/ativar` (público, com limite por IP) | painel cadastra a agente e gera o convite; o aparelho troca o código pelo token |
 | `precadastro` | `/api/pre-cadastros` | agente envia (idempotente); admin lista, aprova (vira família) ou devolve |
 | `comum` | `/api/saude` | erros (`ManipuladorDeErros`), `PaginaResposta`, `LimitadorPorIp` |
 | `dominio` | — | `Idade` (cálculo com idade estimada datada), `NumerosCalcado`, `Rotulavel` |
@@ -34,8 +34,7 @@ Auth e boa parte do domínio já estão prontos. Cada pacote em
 Migrações Flyway: V1 a V12 (a próxima é `V13__…`).
 
 **Ainda não existem:** rota de mapa (`/api/relatorios/mapa`, citada pelo web),
-exportação para Excel (RF-05), rota para criar agente/código de convite (hoje
-só via SQL na tabela `agente`) e rota para o aparelho consultar se o
+exportação para Excel (RF-05) e rota para o aparelho consultar se o
 pré-cadastro foi aprovado ou devolvido.
 
 Ao ajudar aqui, **não construa módulos inteiros por iniciativa própria.** O

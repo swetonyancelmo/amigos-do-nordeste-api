@@ -54,10 +54,11 @@ processo.
 EMAIL=... SENHA=... .claude/skills/rodar-api-local/scripts/semear.sh
 ```
 
-O script cria, sem duplicar, o "Município de Teste", o "Sítio de Teste" e uma
-agente com convite `123456` (a variável `CONVITE` troca o código). Precisa de
-`curl`, `jq` e `docker`. Agente é inserida por SQL porque ainda não existe
-rota para isso.
+O script cria, sem duplicar, o "Município de Teste", o "Sítio de Teste" e a
+"Agente de Teste", e imprime um código de convite novo (seis dígitos, gerado
+pela API em `POST /api/agentes` ou `POST /api/agentes/{id}/novo-convite`).
+Precisa de `curl` e `jq`; como só fala com a API, também serve para o Neon
+(`API=https://... ./semear.sh`).
 
 ## 5. Chamando as rotas
 
