@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
 import br.org.amigosdonordeste.cadastro.comum.dto.PaginaResposta;
 import br.org.amigosdonordeste.cadastro.pessoa.dto.PessoaFiltroDTO;
+import br.org.amigosdonordeste.cadastro.pessoa.request.MoverPessoaRequisicao;
 import br.org.amigosdonordeste.cadastro.pessoa.request.PessoaRequisicao;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -112,6 +113,19 @@ public class PessoaController {
     @PutMapping("/pessoas/{id}")
     public PessoaDetalheResponse atualizar(@PathVariable UUID id, @Valid @RequestBody PessoaRequisicao request) {
         return pessoaService.atualizar(id, request);
+    }
+
+    @Operation(summary = "Muda a pessoa de família",
+        description = "Para corrigir uma família escolhida errada. A comunidade dela muda junto, "
+            + "porque vem da família. Fonte de renda ligada a ela fica com a família antiga.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Pessoa movida (ou já estava nessa família)"),
+        @ApiResponse(responseCode = "404", description = "Não existe pessoa ou família com esse id",
+            content = @Content(schema = @Schema(implementation = ErroResposta.class)))
+    })
+    @PostMapping("/pessoas/{id}/mover")
+    public PessoaDetalheResponse mover(@PathVariable UUID id, @Valid @RequestBody MoverPessoaRequisicao request) {
+        return pessoaService.mover(id, request.familiaId());
     }
 
     @Operation(summary = "Remove a pessoa da família",

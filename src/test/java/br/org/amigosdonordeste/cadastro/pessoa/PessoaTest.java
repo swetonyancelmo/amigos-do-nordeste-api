@@ -412,10 +412,59 @@ class PessoaTest {
             .andExpect(status().isNotFound());
     }
 
+    // ---------- mover de família ----------
+
+    @Test
+    @DisplayName("mover leva a pessoa para a nova família e comunidade, e deixa a fonte de renda na antiga")
+    void moverTrocaFamiliaEComunidade() throws Exception {
+        Comunidade outraComunidade = comunidades.save(
+                Comunidade.builder().municipio(municipio).nome("Outro Sítio Teste").build());
+        Familia outraFamilia = familias.save(
+                Familia.builder().comunidade(outraComunidade).responsavelNome("Outra Responsável Teste").build());
+
+        Pessoa pessoa = membro(familia, "Pessoa Teste", hoje.minusYears(20));
+        FonteRenda fonte = FonteRenda.builder().tipo(TipoFonteRenda.BOLSA_FAMILIA).build();
+        familia.adicionarFonteRenda(fonte);
+        fonte.setPessoa(pessoa);
+        familias.save(familia);
+        UUID pessoaId = pessoas.findAll().get(0).getId();
+        UUID fonteId = fontes.findAll().get(0).getId();
+
+        mvc.perform(json(post("/api/pessoas/{id}/mover", pessoaId),
+                "{\"familiaId\": \"" + outraFamilia.getId() + "\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.familia.id").value(outraFamilia.getId().toString()))
+            .andExpect(jsonPath("$.comunidade.id").value(outraComunidade.getId().toString()));
+
+        assertNull(fontes.findById(fonteId).orElseThrow().getPessoa());
+        assertTrue(fontes.findByFamiliaId(familia.getId()).size() == 1);
+    }
+
+    @Test
+    @DisplayName("mover para a mesma família não dá erro; família ou pessoa inexistente dá 404")
+    void moverCasosDeBorda() throws Exception {
+        Pessoa pessoa = membro(familia, "Pessoa Teste", hoje.minusYears(20));
+        pessoas.save(pessoa);
+        UUID pessoaId = pessoas.findAll().get(0).getId();
+
+        mvc.perform(json(post("/api/pessoas/{id}/mover", pessoaId),
+                "{\"familiaId\": \"" + familia.getId() + "\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.familia.id").value(familia.getId().toString()));
+
+        mvc.perform(json(post("/api/pessoas/{id}/mover", pessoaId),
+                "{\"familiaId\": \"" + UUID.randomUUID() + "\"}"))
+            .andExpect(status().isNotFound());
+
+        mvc.perform(json(post("/api/pessoas/{id}/mover", UUID.randomUUID()),
+                "{\"familiaId\": \"" + familia.getId() + "\"}"))
+            .andExpect(status().isNotFound());
+    }
+
     // ---------- segurança ----------
 
     @Test
-    @DisplayName("as cinco rotas sem token devolvem 401")
+    @DisplayName("as seis rotas sem token devolvem 401")
     void semTokenDevolve401() throws Exception {
         UUID id = UUID.randomUUID();
         String corpo = corpo("Pessoa Teste", false, null, null, null);
@@ -427,6 +476,9 @@ class PessoaTest {
             .andExpect(status().isUnauthorized());
         mvc.perform(put("/api/pessoas/{id}", id)
                 .contentType(MediaType.APPLICATION_JSON).content(corpo))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/pessoas/{id}/mover", id)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"familiaId\": \"" + UUID.randomUUID() + "\"}"))
             .andExpect(status().isUnauthorized());
         mvc.perform(delete("/api/pessoas/{id}", id)).andExpect(status().isUnauthorized());
     }
