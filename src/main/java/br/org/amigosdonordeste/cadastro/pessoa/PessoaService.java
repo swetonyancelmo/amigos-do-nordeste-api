@@ -113,6 +113,37 @@ public class PessoaService {
         removerDaFamilia(pessoa.getFamilia(), pessoa);
     }
 
+    /**
+     * Muda a pessoa de família — para quando a usuária errou a família na
+     * hora de cadastrar. A comunidade dela muda junto, porque vem da família.
+     *
+     * Não usa familia.adicionarPessoa/removerPessoa: mexer nas duas coleções
+     * de Pessoa (orphanRemoval = true) na mesma transação apagaria a pessoa
+     * em vez de movê-la. Só o lado dono da relação (familia_id em Pessoa)
+     * muda; nenhuma das duas coleções é carregada.
+     *
+     * A fonte de renda ligada a ela fica para trás, como renda da família
+     * antiga (mesma regra de removerDaFamilia): renda não atravessa famílias
+     * sozinha.
+     */
+    public PessoaDetalheResponse mover(UUID id, UUID novaFamiliaId) {
+        Pessoa pessoa = buscarDetalhe(id);
+        Familia familiaAtual = pessoa.getFamilia();
+        if (familiaAtual.getId().equals(novaFamiliaId)) {
+            return PessoaDetalheResponse.fromEntity(pessoa);
+        }
+
+        Familia novaFamilia = familiaRepositorio.findById(novaFamiliaId)
+                .orElseThrow(() -> new FamiliaNaoEncontradaException(novaFamiliaId));
+
+        familiaAtual.getFontesRenda().stream()
+                .filter(fonte -> ehDaPessoa(fonte, pessoa))
+                .forEach(fonte -> fonte.setPessoa(null));
+
+        pessoa.setFamilia(novaFamilia);
+        return PessoaDetalheResponse.fromEntity(pessoa);
+    }
+
     private Pessoa buscarDetalhe(UUID id) {
         return pessoaRepositorio.buscarDetalhePorId(id)
                 .orElseThrow(() -> new PessoaNaoEncontradaException(id));
