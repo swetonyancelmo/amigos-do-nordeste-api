@@ -8,6 +8,7 @@ import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -72,6 +73,7 @@ public class Familia {
     @Column(name = "abastecimento", nullable = false, length = 30)
     @Setter(AccessLevel.NONE)
     @Builder.Default
+    @BatchSize(size = 50)
     private Set<AbastecimentoAgua> abastecimentoAgua = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "familia", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -82,6 +84,7 @@ public class Familia {
     @OneToMany(mappedBy = "familia", cascade = CascadeType.ALL, orphanRemoval = true)
     @Setter(AccessLevel.NONE)
     @Builder.Default
+    @BatchSize(size = 50)
     private List<FonteRenda> fontesRenda = new ArrayList<>();
 
     /**
