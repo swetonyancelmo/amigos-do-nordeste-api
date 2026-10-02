@@ -60,4 +60,14 @@ public class RelatorioController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposicao.toString())
                 .body(planilha.conteudo());
     }
+
+    @Operation(summary = "Indicadores da situação das famílias — valor e percentual (issue #19)")
+    @GetMapping("/situacao")
+    public SituacaoResponse situacao(
+            @Parameter(description = "Filtra por comunidade; omitido, soma todas as comunidades")
+            @RequestParam(required = false) UUID comunidadeId,
+            @Parameter(description = "Filtra por município; combina com comunidadeId se os dois vierem")
+            @RequestParam(required = false) UUID municipioId) {
+        return relatorioService.situacao(comunidadeId, municipioId);
+    }
 }

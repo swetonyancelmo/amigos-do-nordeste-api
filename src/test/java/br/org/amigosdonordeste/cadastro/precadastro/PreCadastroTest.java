@@ -5,6 +5,7 @@ import br.org.amigosdonordeste.cadastro.agente.AgenteRepositorio;
 import br.org.amigosdonordeste.cadastro.agente.TokenAgenteService;
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
+import br.org.amigosdonordeste.cadastro.familia.FamiliaRepositorio;
 import br.org.amigosdonordeste.cadastro.municipio.Municipio;
 import br.org.amigosdonordeste.cadastro.municipio.MunicipioRepositorio;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -50,6 +51,7 @@ class PreCadastroTest {
     @Autowired ObjectMapper json;
     @Autowired PreCadastroRepositorio preCadastros;
     @Autowired AgenteRepositorio agentes;
+    @Autowired FamiliaRepositorio familias;
     @Autowired ComunidadeRepositorio comunidades;
     @Autowired MunicipioRepositorio municipios;
     @Autowired TokenAgenteService tokens;
@@ -60,7 +62,10 @@ class PreCadastroTest {
 
     @BeforeEach
     void preparar() {
+        // outra classe de teste pode ter deixado familia no H2 compartilhado,
+        // e familia referencia comunidade: sem isto a FK barra o deleteAll
         preCadastros.deleteAll();
+        familias.deleteAll();
         agentes.deleteAll();
         comunidades.deleteAll();
         municipios.deleteAll();
@@ -231,6 +236,28 @@ class PreCadastroTest {
         mvc.perform(enviar(corpo))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").isString());
+    }
+
+    @Test
+    @DisplayName("sexo F/M do APK antigo é aceito, e o payload guarda o que o aparelho mandou")
+    void sexoAbreviadoDoApkAntigo() throws Exception {
+        UUID id = UUID.randomUUID();
+        String corpo = payload(id, PESSOA_COMPLETA.replace("\"FEMININO\"", "\"F\""));
+
+        mvc.perform(enviar(corpo))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.situacao").value("ACEITO"));
+
+        JsonNode guardado = json.readTree(preCadastros.findById(id).orElseThrow().getPayload());
+        assertEquals("F", guardado.get("pessoas").get(0).get("sexo").asText());
+    }
+
+    @Test
+    @DisplayName("sexo fora da lista continua sendo 400")
+    void sexoForaDaListaE400() throws Exception {
+        String corpo = payload(UUID.randomUUID(), PESSOA_COMPLETA.replace("\"FEMININO\"", "\"Mulher\""));
+
+        mvc.perform(enviar(corpo)).andExpect(status().isBadRequest());
     }
 
     @Test

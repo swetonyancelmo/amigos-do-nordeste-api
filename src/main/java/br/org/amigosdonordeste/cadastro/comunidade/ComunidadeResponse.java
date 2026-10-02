@@ -10,12 +10,12 @@ public record ComunidadeResponse (
       String nome,
       UUID municipioId,
       String municipioNome,
-      TipoComunidade tipo,
+      TipoComunidade tipoComunidade,
       String liderNome,
       String liderTelefone,
       BigDecimal latitude,
       BigDecimal longitude,
-      String observaces
+      String observacoes
 ) {
       public static ComunidadeResponse fromEntity(Comunidade comunidade) {
         return new ComunidadeResponse(

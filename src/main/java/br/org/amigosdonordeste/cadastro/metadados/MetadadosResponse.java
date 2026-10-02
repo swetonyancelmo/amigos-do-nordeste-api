@@ -5,6 +5,7 @@ import java.util.List;
 public record MetadadosResponse(
     List<OpcaoDTO> tipoComunidade,
     List<OpcaoDTO> sexo,
+    List<OpcaoDTO> parentesco,
     List<OpcaoDTO> abastecimentoAgua,
     List<OpcaoDTO> escoamentoSanitario,
     List<OpcaoDTO> tratamentoAgua,
@@ -12,6 +13,7 @@ public record MetadadosResponse(
     List<OpcaoDTO> faixaRenda,
     List<OpcaoDTO> serie,
     List<OpcaoDTO> tamanhoRoupa,
-    List<OpcaoDTO> numeroCalcado
+    List<OpcaoDTO> numeroCalcado,
+    List<OpcaoDTO> situacaoPreCadastro
 ) {
 }

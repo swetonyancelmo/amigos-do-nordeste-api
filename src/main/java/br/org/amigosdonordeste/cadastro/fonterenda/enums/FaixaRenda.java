@@ -5,6 +5,9 @@ import br.org.amigosdonordeste.cadastro.dominio.Rotulavel;
  * um vizinho, no papel, sobre trabalho sazonal, e o dado menos confiavel do
  * cadastro — e o mais sensivel (ver docs/decisoes/ADR-0003).
  *
+ * E da familia (familia.faixa_renda), nao de cada fonte: faixa nao se soma, e
+ * o que importa e quanto entra na casa (V14).
+ *
  * Lista fechada, valores provisorios — a servir por /api/metadados.
  */
 public enum FaixaRenda implements Rotulavel {

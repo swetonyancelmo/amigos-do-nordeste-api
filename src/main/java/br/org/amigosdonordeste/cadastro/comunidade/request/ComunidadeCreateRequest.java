@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public record ComunidadeCreateRequest(
   @NotBlank
-  @Size(min = 1, max = 100)
+  @Size(max = 120)
   String nome,
 
   @NotNull
@@ -18,10 +18,11 @@ public record ComunidadeCreateRequest(
 
   TipoComunidade tipoComunidade,
 
-  @Size(min = 1, max = 120)
+  @Size(max = 120)
   String liderNome,
 
-  @Size(min = 1, max = 120)
+  // mesmo tamanho da coluna (V7): passar daqui virava o 400 genérico do banco
+  @Size(max = 20)
   String liderTelefone,
 
   BigDecimal latitude,

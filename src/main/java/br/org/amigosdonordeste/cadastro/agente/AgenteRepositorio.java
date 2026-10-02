@@ -6,11 +6,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface AgenteRepositorio extends JpaRepository<Agente, UUID> {
     Optional<Agente> findByTokenHashAndAtivoTrue(String tokenHash);
+
+    boolean existsByCodigoConvite(String codigoConvite);
+
+    List<Agente> findAllByOrderByNomeAsc();
 
     /**
      * Consome o codigo de convite em um UPDATE condicional: so quem ainda

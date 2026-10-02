@@ -4,6 +4,7 @@ import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeResponse;
 import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.FaixaEtaria;
 
 import java.time.OffsetDateTime;
@@ -31,9 +32,11 @@ public record FamiliaDetalheResponse(
         EscoamentoSanitario escoamentoSanitario,
         TratamentoAgua tratamentoAgua,
         Set<AbastecimentoAgua> abastecimentoAgua,
+        FaixaRenda faixaRenda,
         List<PessoaResponse> pessoas,
         List<FonteRendaResponse> fontesRenda,
         String observacoes,
+        boolean ativa,
         OffsetDateTime criadoEm,
         OffsetDateTime atualizadoEm,
         Totais totais
@@ -83,9 +86,11 @@ public record FamiliaDetalheResponse(
                 familia.getEscoamentoSanitario(),
                 familia.getTratamentoAgua(),
                 abastecimento,
+                familia.getFaixaRenda(),
                 pessoas,
                 fontes,
                 familia.getObservacoes(),
+                familia.isAtiva(),
                 familia.getCriadoEm(),
                 familia.getAtualizadoEm(),
                 contar(pessoas, fontes)

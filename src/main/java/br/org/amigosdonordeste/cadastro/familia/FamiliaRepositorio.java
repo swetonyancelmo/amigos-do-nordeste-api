@@ -1,6 +1,10 @@
 package br.org.amigosdonordeste.cadastro.familia;
 
+import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
+import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -8,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
+public interface FamiliaRepositorio extends JpaRepository<Familia, UUID>, JpaSpecificationExecutor<Familia> {
 
     /**
      * Issue #17: a ficha completa que a tela de edicao carrega. Join fetch de
@@ -48,29 +52,45 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
         join fetch f.comunidade c
         join fetch c.municipio
         where upper(f.responsavelNome) like upper(concat('%', :nome, '%'))
+          and f.ativa = true
         order by f.responsavelNome
         """)
     List<Familia> buscarPorResponsavel(@Param("nome") String nome);
 
+    /**
+     * Issue #16: segunda etapa de GET /api/familias. A primeira é o
+     * findAll(Specification, Pageable) com os filtros, que devolve a página de
+     * famílias sem nada associado carregado (mais o count). Aqui vêm comunidade, município e pessoas das
+     * famílias dessa página numa consulta só — os totais da linha saem de
+     * pessoas. Não dá pra paginar direto com join fetch de coleção: o
+     * Hibernate traria tudo e paginaria em memória (HHH90003004).
+     */
     @Query("""
-        select f from Familia f
+        select distinct f from Familia f
         join fetch f.comunidade c
         join fetch c.municipio
-        order by f.responsavelNome
+        left join fetch f.pessoas
+        where f.id in :ids
         """)
-    List<Familia> listarComComunidade();
+    List<Familia> buscarComPessoasPorIds(@Param("ids") List<UUID> ids);
 
-    List<Familia> findByComunidadeIdOrderByResponsavelNomeAsc(UUID comunidadeId);
+    /** Duplicata do pre-cadastro: so contra familia ativa (ver buscarPorNomeParecidoNaComunidade). */
+    List<Familia> findByComunidadeIdAndAtivaTrueOrderByResponsavelNomeAsc(UUID comunidadeId);
 
     /**
      * Deteccao de duplicata por nome, dentro da comunidade. unaccent (extensao
      * instalada na V1) porque o cadastro vem de papel: "Jose" tem que achar
      * "José". No perfil de teste o H2 recebe um alias UNACCENT feito em Java
      * (ver application-test.yml).
+     *
+     * Familia inativa nao conta: em geral foi inativada justamente por ser
+     * duplicata ou erro, e apontar para ela mandaria a revisora para um
+     * registro que ja saiu da base.
      */
     @Query(value = """
         select f.* from familia f
         where f.comunidade_id = :comunidadeId
+          and f.ativa = true
           and unaccent(lower(trim(f.responsavel_nome))) = unaccent(lower(trim(:nome)))
         order by f.responsavel_nome
         """, nativeQuery = true)
@@ -79,13 +99,16 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
 
     /**
      * Issue #18: total de famílias no escopo do relatório de necessidades.
+     * Também é o denominador dos percentuais da issue #19 (situação).
      * comunidadeId e municipioId são opcionais — sem os dois, conta todas.
+     * Toda contagem daqui para baixo ignora família inativa (issue #43).
      */
     @Query("""
         select count(f) from Familia f
         join f.comunidade c
         where (:comunidadeId is null or c.id = :comunidadeId)
           and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
         """)
     long contarParaRelatorioNecessidades(@Param("comunidadeId") UUID comunidadeId,
                                         @Param("municipioId") UUID municipioId);
@@ -95,7 +118,8 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
      * inteira (join fetch de pessoas) — as abas "Famílias" e "Pessoas" da
      * planilha precisam dos dados completos, não só da contagem. distinct pelo
      * mesmo motivo de {@link #buscarDetalhePorId}: join fetch de pessoas
-     * multiplica a linha por membro.
+     * multiplica a linha por membro. Família inativa fica de fora, igual ao
+     * resto do relatório (issue #43).
      */
     @Query("""
         select distinct f from Familia f
@@ -104,8 +128,69 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID> {
         left join fetch f.pessoas
         where (:comunidadeId is null or c.id = :comunidadeId)
           and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
         order by c.nome, f.responsavelNome
         """)
     List<Familia> buscarParaExportacaoNecessidades(@Param("comunidadeId") UUID comunidadeId,
                                                    @Param("municipioId") UUID municipioId);
+
+    /*
+     * Issue #19: indicadores de situacao. Cada um e um count no banco, com o
+     * mesmo filtro opcional de comunidade/municipio do relatorio de
+     * necessidades — carregar as familias e percorrer abastecimentoAgua e
+     * fontesRenda em Java faria duas consultas extras por familia (N+1).
+     * O total de familias do escopo vem de contarParaRelatorioNecessidades.
+     */
+
+    /** tem_banheiro nao e true: false ou nao informado. */
+    @Query("""
+        select count(f) from Familia f
+        join f.comunidade c
+        where (:comunidadeId is null or c.id = :comunidadeId)
+          and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
+          and (f.temBanheiro is null or f.temBanheiro = false)
+        """)
+    long contarSemBanheiro(@Param("comunidadeId") UUID comunidadeId,
+                           @Param("municipioId") UUID municipioId);
+
+    @Query("""
+        select count(f) from Familia f
+        join f.comunidade c
+        where (:comunidadeId is null or c.id = :comunidadeId)
+          and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
+          and f.tratamentoAgua = :tratamento
+        """)
+    long contarPorTratamentoAgua(@Param("comunidadeId") UUID comunidadeId,
+                                 @Param("municipioId") UUID municipioId,
+                                 @Param("tratamento") TratamentoAgua tratamento);
+
+    /** Abastecimento com exatamente um item, e esse item e o informado. */
+    @Query("""
+        select count(f) from Familia f
+        join f.comunidade c
+        where (:comunidadeId is null or c.id = :comunidadeId)
+          and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
+          and size(f.abastecimentoAgua) = 1
+          and :abastecimento member of f.abastecimentoAgua
+        """)
+    long contarSoComAbastecimento(@Param("comunidadeId") UUID comunidadeId,
+                                  @Param("municipioId") UUID municipioId,
+                                  @Param("abastecimento") AbastecimentoAgua abastecimento);
+
+    /** Fontes de renda com exatamente um item, e esse item e do tipo informado. */
+    @Query("""
+        select count(f) from Familia f
+        join f.comunidade c
+        where (:comunidadeId is null or c.id = :comunidadeId)
+          and (:municipioId is null or c.municipio.id = :municipioId)
+          and f.ativa = true
+          and size(f.fontesRenda) = 1
+          and exists (select 1 from FonteRenda fr where fr.familia = f and fr.tipo = :tipo)
+        """)
+    long contarSoComFonteRenda(@Param("comunidadeId") UUID comunidadeId,
+                               @Param("municipioId") UUID municipioId,
+                               @Param("tipo") TipoFonteRenda tipo);
 }

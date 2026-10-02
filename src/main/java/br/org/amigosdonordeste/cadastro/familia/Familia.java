@@ -5,6 +5,7 @@ import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;
@@ -86,8 +87,26 @@ public class Familia {
     @BatchSize(size = 50)
     private List<FonteRenda> fontesRenda = new ArrayList<>();
 
+    /**
+     * Quanto entra na casa, somando todas as fontes. É da família, não de cada
+     * fonte: faixa não se soma (ADR-0003). As fontes dizem só de onde vem.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "faixa_renda", length = 30)
+    private FaixaRenda faixaRenda;
+
     @Column(columnDefinition = "text")
     private String observacoes;
+
+    /**
+     * Issue #43: familia nao se apaga, se inativa. Inativa some de listagem,
+     * relatorio, contagem e mapa, mas continua no banco e pode voltar. Sem
+     * setter: muda so por inativar()/reativar().
+     */
+    @Column(nullable = false)
+    @Setter(AccessLevel.NONE)
+    @Builder.Default
+    private boolean ativa = true;
 
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm;
@@ -107,6 +126,14 @@ public class Familia {
     @PreUpdate
     private void aoAtualizar() {
         atualizadoEm = OffsetDateTime.now();
+    }
+
+    public void inativar() {
+        ativa = false;
+    }
+
+    public void reativar() {
+        ativa = true;
     }
 
     public void adicionarPessoa(Pessoa pessoa) {

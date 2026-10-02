@@ -35,6 +35,27 @@ Renda declarada por um vizinho, no papel, sobre trabalho sazonal, é o dado meno
 confiável do cadastro — e o mais sensível. Para priorizar doação, *quais fontes*
 mais *quantos dependentes* já ordena as famílias.
 
+## Revisão de 01/10/2026: a faixa é da família, não de cada fonte
+
+A decisão 4 deixou a faixa em cada `fonte_renda`. Na prática isso não respondia
+à pergunta que importa — *quanto entra na casa?* —, porque faixa não se soma:
+"até 1 salário" + "até 1 salário" pode ser qualquer coisa entre 0 e 2. Na tela
+também confundia: parecia que a renda era cadastrada duas vezes, uma por
+pessoa e outra pela família.
+
+**Agora (V14):**
+
+- `familia.faixa_renda` guarda **uma** faixa: a renda da casa somando tudo;
+- `fonte_renda` fica só com **tipo** e **dono opcional** (decisão 4 continua
+  valendo nessa parte): diz de onde o dinheiro vem, não quanto é;
+- o tipo `NENHUMA` saiu da lista: família sem renda é a faixa `SEM_RENDA_FIXA`.
+
+Somar renda por pessoa foi descartado pelo mesmo motivo da decisão 5: exigiria
+valor em reais por pessoa, o dado menos confiável e mais sensível do cadastro.
+
+Na migração, a faixa antiga só foi aproveitada onde já era a renda da casa (família
+com uma fonte só); com duas ou mais fontes ela fica em branco para quem revisar.
+
 ## Consequência que não pode ser esquecida
 
 Todo campo coletado precisa aparecer em pelo menos um relatório ou filtro

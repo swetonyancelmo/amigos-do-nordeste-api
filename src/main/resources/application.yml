@@ -22,7 +22,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
+    # false: num banco que ja tenha tabelas e nenhum historico do Flyway, a
+    # subida falha em vez de marcar a V1 como aplicada sem rodar (o que
+    # deixaria de fora as extensoes unaccent/pgcrypto e a tabela usuario).
+    baseline-on-migrate: false
 
 server:
   port: ${PORT:3333}
@@ -61,7 +64,9 @@ app:
   # Em produção precisa ser true (o cookie só viaja em HTTPS).
   cookie-seguro: ${APP_COOKIE_SEGURO:false}
   usuario-inicial:
-    email: swetony@gmail.com
+    # Sem padrao de proposito: o perfil criar-usuario recusa rodar sem
+    # APP_USUARIO_INICIAL_EMAIL, em vez de criar a conta num e-mail fixo.
+    email: ${APP_USUARIO_INICIAL_EMAIL:}
     nome: ${APP_USUARIO_INICIAL_NOME:Associação Amigos do Nordeste}
 
 logging:

@@ -97,6 +97,7 @@ class FamiliaDetalheTest {
             .tratamentoAgua(TratamentoAgua.SEM_TRATAMENTO)
             .build();
         familia.getAbastecimentoAgua().add(AbastecimentoAgua.CISTERNA);
+        familia.setFaixaRenda(FaixaRenda.ATE_1_SALARIO);
 
         // uma pessoa de cada faixa etaria, mais uma sem idade nenhuma
         familia.adicionarPessoa(pessoa("Criança de Teste", LocalDate.now().minusYears(8), true));
@@ -123,7 +124,6 @@ class FamiliaDetalheTest {
     private static FonteRenda fonte(TipoFonteRenda tipo) {
         FonteRenda fonte = new FonteRenda();
         fonte.setTipo(tipo);
-        fonte.setFaixa(FaixaRenda.ATE_1_SALARIO);
         return fonte;
     }
 
@@ -137,6 +137,7 @@ class FamiliaDetalheTest {
             .andExpect(jsonPath("$.comunidade.municipioNome").value("Município de Teste"))
             .andExpect(jsonPath("$.abastecimentoAgua", hasSize(1)))
             .andExpect(jsonPath("$.pessoas", hasSize(4)))
+            .andExpect(jsonPath("$.faixaRenda").value("ATE_1_SALARIO"))
             .andExpect(jsonPath("$.fontesRenda", hasSize(2)));
     }
 

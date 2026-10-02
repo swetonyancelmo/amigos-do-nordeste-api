@@ -3,6 +3,7 @@ package br.org.amigosdonordeste.cadastro.familia.request;
 import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
+import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 
 import java.util.Set;
 import java.util.UUID;
@@ -21,5 +22,6 @@ public sealed interface CamposFamilia permits CriarFamiliaRequisicao, AtualizarF
     EscoamentoSanitario escoamentoSanitario();
     TratamentoAgua tratamentoAgua();
     Set<AbastecimentoAgua> abastecimentoAgua();
+    FaixaRenda faixaRenda();
     String observacoes();
 }

@@ -21,8 +21,10 @@ O CI roda o mesmo, com um Postgres de serviço.
 
 ## Banco
 
-- Tabela nova ou entidade alterada? Crie uma migração nova:
-  `V2__comunidade.sql`, `V3__familia.sql`, e assim por diante.
+- Tabela nova ou entidade alterada? Crie uma migração nova com o próximo
+  número livre (já existem V1 a V12, então a próxima é `V13__descricao.sql`).
+- Os testes rodam em H2 com o Flyway desligado, então `mvn verify` não testa
+  a migração. Suba a API contra o Postgres do docker para conferir.
 - **Nunca edite uma migração que já rodou** no banco de outra pessoa. O Flyway
   guarda o checksum e vai reclamar — e com razão.
 - `ddl-auto` fica `none`. Se você está pensando em ligar `update` para "resolver
