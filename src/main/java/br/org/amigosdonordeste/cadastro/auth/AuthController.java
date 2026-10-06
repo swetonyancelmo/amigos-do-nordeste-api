@@ -65,26 +65,25 @@ public class AuthController {
 
         // O access token vai no corpo e vive so em memoria no frontend.
         // O de renovacao vai em cookie httpOnly — nenhum dos dois em localStorage.
-        return new LoginResposta(
-            new LoginResposta.UsuarioResumo(
-                tokens.usuario().getId(), tokens.usuario().getNome(), tokens.usuario().getEmail()),
-            tokens.acesso());
+        return resumir(tokens);
     }
 
     @Operation(summary = "Renovar token de acesso",
-        description = "Gera um novo access token a partir do refresh token enviado no cookie httpOnly 'and_refresh'.")
+        description = "Gera um novo access token a partir do refresh token enviado no cookie httpOnly 'and_refresh'. "
+            + "Devolve também o resumo do usuário, como o login: o painel guarda tudo em memória e, ao recarregar "
+            + "a página, só tem esta chamada para saber quem está logado.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Token renovado com sucesso"),
         @ApiResponse(responseCode = "401", description = "Refresh token ausente, inválido ou expirado",
             content = @Content(schema = @Schema(implementation = ErroResposta.class)))
     })
     @PostMapping("/renovar")
-    public Map<String, String> renovar(
+    public LoginResposta renovar(
         @CookieValue(name = COOKIE_RENOVACAO, required = false) String tokenRenovacao,
         HttpServletResponse resposta) {
         AuthService.Tokens tokens = auth.renovar(tokenRenovacao);
         gravarCookie(resposta, tokens.renovacao());
-        return Map.of("accessToken", tokens.acesso());
+        return resumir(tokens);
     }
 
     @Operation(summary = "Sair do sistema",
@@ -114,6 +113,13 @@ public class AuthController {
                                             @Valid @RequestBody TrocarSenhaRequisicao requisicao) {
         auth.trocarSenha(UUID.fromString(usuarioId), requisicao.senhaAtual(), requisicao.senhaNova());
         return Map.of("ok", true);
+    }
+
+    private static LoginResposta resumir(AuthService.Tokens tokens) {
+        return new LoginResposta(
+            new LoginResposta.UsuarioResumo(
+                tokens.usuario().getId(), tokens.usuario().getNome(), tokens.usuario().getEmail()),
+            tokens.acesso());
     }
 
     private void gravarCookie(HttpServletResponse resposta, String tokenRenovacao) {
