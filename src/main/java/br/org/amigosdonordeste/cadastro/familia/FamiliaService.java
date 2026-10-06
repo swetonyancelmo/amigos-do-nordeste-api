@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -18,7 +19,10 @@ import br.org.amigosdonordeste.cadastro.comum.dto.PaginaResposta;
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
 import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.dominio.Cpf;
 import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaFiltroDTO;
+import br.org.amigosdonordeste.cadastro.familia.exception.CpfInvalidoException;
+import br.org.amigosdonordeste.cadastro.familia.exception.CpfJaCadastradoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadException;
 import br.org.amigosdonordeste.cadastro.familia.exception.PessoaReferenciadaInvalidaException;
@@ -119,6 +123,7 @@ public class FamiliaService {
 
     /** Issue #14 */
     public FamiliaResponse criar(CriarFamiliaRequisicao request) {
+        validarCpf(request.responsavelCpf(), null);
         Familia familia = new Familia();
         familia.setComunidade(buscarComunidade(request.comunidadeId()));
         aplicarCamposSimples(familia, request);
@@ -150,6 +155,7 @@ public class FamiliaService {
 
         Familia familia = familiaRepositorio.findById(id)
                 .orElseThrow(() -> new FamiliaNaoEncontradaException(id));
+        validarCpf(request.responsavelCpf(), id);
 
         familia.setComunidade(buscarComunidade(request.comunidadeId()));
         aplicarCamposSimples(familia, request);
@@ -219,6 +225,30 @@ public class FamiliaService {
     }
 
     /**
+     * CPF é opcional, mas se vier tem que ser válido e não pode ser de outra
+     * família, ativa ou inativa (uma inativa se reativa, não se recadastra).
+     * Roda antes de mexer na entidade. Vale também para a aprovação de
+     * pré-cadastro, que cria a família por criar().
+     *
+     * @param idDaFamilia null no POST; no PUT, a própria família não conta
+     */
+    private void validarCpf(String cpfInformado, UUID idDaFamilia) {
+        String cpf = Cpf.somenteDigitos(cpfInformado);
+        if (cpf == null) {
+            return;
+        }
+        if (!Cpf.valido(cpf)) {
+            throw new CpfInvalidoException();
+        }
+        Optional<Familia> outra = idDaFamilia == null
+                ? familiaRepositorio.findFirstByResponsavelCpf(cpf)
+                : familiaRepositorio.findFirstByResponsavelCpfAndIdNot(cpf, idDaFamilia);
+        outra.ifPresent(f -> {
+            throw new CpfJaCadastradoException(f.getResponsavelNome(), f.isAtiva());
+        });
+    }
+
+    /**
      * Dois itens com o mesmo id no payload cairiam no mesmo ramo "existente" e
      * o segundo sobrescreveria o primeiro em silêncio. Melhor recusar de cara.
      */
@@ -270,7 +300,7 @@ public class FamiliaService {
 
     private void aplicarCamposSimples(Familia familia, CamposFamilia request) {
         familia.setResponsavelNome(request.responsavelNome());
-        familia.setResponsavelCpf(somenteDigitos(request.responsavelCpf()));
+        familia.setResponsavelCpf(Cpf.somenteDigitos(request.responsavelCpf()));
         familia.setTelefone(request.telefone());
         familia.setPontoReferencia(request.pontoReferencia());
         familia.setTemBanheiro(request.temBanheiro());
@@ -283,13 +313,5 @@ public class FamiliaService {
         if (request.abastecimentoAgua() != null) {
             familia.getAbastecimentoAgua().addAll(request.abastecimentoAgua());
         }
-    }
-
-    /** A coluna guarda só os 11 dígitos; o front pode mandar "000.000.000-00". */
-    private static String somenteDigitos(String valor) {
-        if (valor == null || valor.isBlank()) {
-            return null;
-        }
-        return valor.replaceAll("\\D", "");
     }
 }

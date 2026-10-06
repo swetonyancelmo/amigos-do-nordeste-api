@@ -30,6 +30,8 @@ import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncont
 import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
+import br.org.amigosdonordeste.cadastro.familia.exception.CpfInvalidoException;
+import br.org.amigosdonordeste.cadastro.familia.exception.CpfJaCadastradoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
@@ -403,13 +405,101 @@ class FamiliaServiceTest {
         when(familiaRepositorio.save(any(Familia.class))).thenAnswer(chamada -> chamada.getArgument(0));
 
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
-                comunidadeExistente.getId(), "Maria", "000.000.000-00", null, null, true,
+                comunidadeExistente.getId(), "Maria", "123.456.789-09", null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
                 Set.of(), null, List.of(), List.of(), null);
 
         FamiliaResponse resposta = familiaService.criar(request);
 
-        assertEquals("00000000000", resposta.responsavelCpf());
+        assertEquals("12345678909", resposta.responsavelCpf());
+    }
+
+    private CriarFamiliaRequisicao criarComCpf(String cpf) {
+        return new CriarFamiliaRequisicao(
+                comunidadeExistente.getId(), "Maria", cpf, null, null, true,
+                EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
+                Set.of(), null, List.of(), List.of(), null);
+    }
+
+    @Test
+    @DisplayName("POST com CPF de dígito verificador errado é recusado e nada é salvo")
+    void recusaCpfInvalido() {
+        assertThrows(CpfInvalidoException.class, () -> familiaService.criar(criarComCpf("111.111.111-11")));
+        assertThrows(CpfInvalidoException.class, () -> familiaService.criar(criarComCpf("123.456.789-00")));
+        verify(familiaRepositorio, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("POST com CPF que já é de outra família é recusado e diz de qual")
+    void recusaCpfRepetido() {
+        Familia outra = new Familia();
+        outra.setResponsavelNome("Responsável Já Cadastrada");
+        when(familiaRepositorio.findFirstByResponsavelCpf("12345678909")).thenReturn(Optional.of(outra));
+
+        CpfJaCadastradoException erro = assertThrows(CpfJaCadastradoException.class,
+                () -> familiaService.criar(criarComCpf("123.456.789-09")));
+        assertTrue(erro.getMessage().contains("Responsável Já Cadastrada"));
+        verify(familiaRepositorio, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("CPF de família inativa também bloqueia, e a mensagem manda reativar")
+    void recusaCpfDeFamiliaInativa() {
+        Familia inativa = new Familia();
+        inativa.setResponsavelNome("Responsável Inativa");
+        inativa.inativar();
+        when(familiaRepositorio.findFirstByResponsavelCpf("12345678909")).thenReturn(Optional.of(inativa));
+
+        CpfJaCadastradoException erro = assertThrows(CpfJaCadastradoException.class,
+                () -> familiaService.criar(criarComCpf("12345678909")));
+        assertTrue(erro.getMessage().contains("Reative"));
+    }
+
+    @Test
+    @DisplayName("PUT mantendo o próprio CPF não conta como repetido")
+    void putComOProprioCpf() {
+        Familia familiaExistente = new Familia();
+        familiaExistente.setId(UUID.randomUUID());
+        familiaExistente.setComunidade(comunidadeExistente);
+        familiaExistente.setResponsavelCpf("12345678909");
+
+        when(familiaRepositorio.findById(familiaExistente.getId())).thenReturn(Optional.of(familiaExistente));
+        when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
+        when(familiaRepositorio.findFirstByResponsavelCpfAndIdNot("12345678909", familiaExistente.getId()))
+                .thenReturn(Optional.empty());
+        when(familiaRepositorio.saveAndFlush(any(Familia.class))).thenAnswer(chamada -> chamada.getArgument(0));
+
+        AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
+                comunidadeExistente.getId(), "Maria", "123.456.789-09", null, null, true,
+                EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
+                Set.of(), null, List.of(), List.of(), null);
+
+        assertEquals("12345678909", familiaService.atualizar(familiaExistente.getId(), request).responsavelCpf());
+    }
+
+    @Test
+    @DisplayName("PUT para o CPF de outra família é recusado antes de mexer em qualquer campo")
+    void putComCpfDeOutraFamilia() {
+        Familia familiaExistente = new Familia();
+        familiaExistente.setId(UUID.randomUUID());
+        familiaExistente.setComunidade(comunidadeExistente);
+        familiaExistente.setResponsavelNome("Nome Original");
+        Familia outra = new Familia();
+        outra.setResponsavelNome("Outra Responsável");
+
+        when(familiaRepositorio.findById(familiaExistente.getId())).thenReturn(Optional.of(familiaExistente));
+        when(familiaRepositorio.findFirstByResponsavelCpfAndIdNot("12345678909", familiaExistente.getId()))
+                .thenReturn(Optional.of(outra));
+
+        AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
+                comunidadeExistente.getId(), "Nome Novo", "12345678909", null, null, true,
+                EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
+                Set.of(), null, List.of(), List.of(), null);
+
+        assertThrows(CpfJaCadastradoException.class,
+                () -> familiaService.atualizar(familiaExistente.getId(), request));
+        assertEquals("Nome Original", familiaExistente.getResponsavelNome());
+        verify(familiaRepositorio, never()).saveAndFlush(any());
     }
 
     @Test

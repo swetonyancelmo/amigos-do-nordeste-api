@@ -19,6 +19,8 @@ import br.org.amigosdonordeste.cadastro.auth.CredenciaisInvalidasException;
 import br.org.amigosdonordeste.cadastro.auth.SenhaAtualIncorretaException;
 import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
 import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
+import br.org.amigosdonordeste.cadastro.familia.exception.CpfInvalidoException;
+import br.org.amigosdonordeste.cadastro.familia.exception.CpfJaCadastradoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdDuplicadoNoPayloadException;
 import br.org.amigosdonordeste.cadastro.familia.exception.IdadeEstimadaInvalidaException;
@@ -120,6 +122,16 @@ public class ManipuladorDeErros {
     @ExceptionHandler(IdDuplicadoNoPayloadException.class)
     public ResponseEntity<ErroResposta> idDuplicado(IdDuplicadoNoPayloadException e) {
         return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(CpfInvalidoException.class)
+    public ResponseEntity<ErroResposta> cpfInvalido(CpfInvalidoException e) {
+        return resposta(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(CpfJaCadastradoException.class)
+    public ResponseEntity<ErroResposta> cpfJaCadastrado(CpfJaCadastradoException e) {
+        return resposta(HttpStatus.CONFLICT, e.getMessage());
     }
 
     @ExceptionHandler(PreCadastroInvalidoException.class)

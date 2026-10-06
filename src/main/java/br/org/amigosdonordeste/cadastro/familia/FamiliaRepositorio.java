@@ -74,6 +74,12 @@ public interface FamiliaRepositorio extends JpaRepository<Familia, UUID>, JpaSpe
         """)
     List<Familia> buscarComPessoasPorIds(@Param("ids") List<UUID> ids);
 
+    /** CPF repetido (FamiliaService.validarCpf): ativa ou inativa, conta. */
+    Optional<Familia> findFirstByResponsavelCpf(String responsavelCpf);
+
+    /** O mesmo, no PUT: a própria família não é duplicata de si mesma. */
+    Optional<Familia> findFirstByResponsavelCpfAndIdNot(String responsavelCpf, UUID id);
+
     /** Duplicata do pre-cadastro: so contra familia ativa (ver buscarPorNomeParecidoNaComunidade). */
     List<Familia> findByComunidadeIdAndAtivaTrueOrderByResponsavelNomeAsc(UUID comunidadeId);
 
