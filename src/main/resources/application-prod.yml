@@ -1,0 +1,79 @@
+# Perfil de produção (SPRING_PROFILES_ACTIVE=prod). Só o que muda em relação
+# ao application.yml; o resto vem de lá. Passo a passo em docs/DEPLOY.md.
+#
+# Em produção nada tem valor padrão "de desenvolvimento": a API não sobe
+# apontando para localhost nem assinando token com o segredo público do
+# application.yml. Sem APP_JWT_SEGREDO ou APP_CORS_ORIGENS a subida falha com
+# "Could not resolve placeholder 'NOME'"; sem DATABASE_URL, com
+# "URL must start with 'jdbc'". Sintomas e correções em docs/DEPLOY.md.
+
+spring:
+  datasource:
+    # Pode ser a string do Neon do jeito que o console mostra
+    # (postgresql://usuario:senha@host/banco?sslmode=require): o
+    # ConversorUrlBanco a transforma em JDBC e preenche usuário e senha.
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USUARIO}
+    password: ${DATABASE_SENHA}
+    hikari:
+      # Uma usuária e algumas agentes: 5 conexões sobram, e cada uma custa
+      # memória aqui e no Neon.
+      maximum-pool-size: 5
+      # Sem uso por 2 minutos, o pool fecha todas as conexões. O Neon gratuito
+      # dorme depois de 5 minutos parado e cobra horas de compute acordado
+      # (100 CU-hora por mês); conexão aberta à toa, com o ping mantendo a API
+      # de pé o dia inteiro, poderia mantê-lo acordado também. A primeira
+      # consulta depois disso abre conexão nova: alguns décimos de segundo.
+      minimum-idle: 0
+      idle-timeout: 120000   # ms
+
+  jpa:
+    # Repetido do application.yml de propósito: em produção, nunca outra coisa.
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+  flyway:
+    enabled: true
+
+  # Não ligamos spring.main.lazy-initialization. Ela poupa memória e tempo de
+  # subida, mas adia para a primeira requisição o erro de configuração de
+  # qualquer bean: o deploy fica verde no Render, o health check (/api/saude)
+  # passa, e quem descobre o problema é a usuária, no meio do uso. Num
+  # serviço que hiberna, toda subida é uma subida a frio, e o tempo poupado
+  # nela só mudaria de lugar para a primeira tela. Ver docs/DEPLOY.md.
+
+  lifecycle:
+    # O Render manda SIGTERM e espera 30 s antes do SIGKILL.
+    timeout-per-shutdown-phase: 20s
+
+server:
+  shutdown: graceful
+  tomcat:
+    threads:
+      # O padrão (200) não é usado por uma usuária, mas cada thread que nasce
+      # leva a sua pilha da memória do container (512 MB no Render gratuito).
+      max: 20
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+
+app:
+  jwt:
+    # Sem padrão: o do application.yml é público (está no git).
+    segredo: ${APP_JWT_SEGREDO}
+  cors:
+    origens: ${APP_CORS_ORIGENS}
+  # HTTPS sempre em produção: o cookie de renovação não viaja em HTTP.
+  cookie-seguro: ${APP_COOKIE_SEGURO:true}
+
+logging:
+  level:
+    root: INFO
+    br.org.amigosdonordeste: INFO
+    # Nada de SQL nem de parâmetro de consulta em log: os parâmetros são
+    # dados de família.
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: OFF
