@@ -116,6 +116,20 @@ class FamiliaListagemTest {
     }
 
     @Test
+    @DisplayName("busca ignora apóstrofo: davila e d'avila acham D'Ávila")
+    void buscaIgnoraApostrofo() throws Exception {
+        Familia davila = salvar("Maria D'Ávila Teste", comunidadeA, true);
+        salvar("Maria Teste", comunidadeA, true);
+
+        for (String termo : new String[] {"davila", "d'avila", "D’Ávila", "Maria DAvila"}) {
+            mvc.perform(get("/api/familias").param("busca", termo).header("Authorization", bearerAdmin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itens", hasSize(1)))
+                .andExpect(jsonPath("$.itens[0].id").value(davila.getId().toString()));
+        }
+    }
+
+    @Test
     @DisplayName("% e _ na busca são texto, não curinga")
     void buscaNaoInterpretaCuringa() throws Exception {
         salvar("Ana Teste", comunidadeA, true);

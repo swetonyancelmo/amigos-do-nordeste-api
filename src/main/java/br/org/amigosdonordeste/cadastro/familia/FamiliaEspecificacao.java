@@ -1,9 +1,10 @@
 package br.org.amigosdonordeste.cadastro.familia;
 
 import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaFiltroDTO;
-import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
+
+import br.org.amigosdonordeste.cadastro.comum.BuscaPorNome;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,8 +15,6 @@ import java.util.List;
  * Specification serve para a consulta da página e para o count.
  */
 final class FamiliaEspecificacao {
-
-    private static final char ESCAPE = '\\';
 
     private FamiliaEspecificacao() { }
 
@@ -28,13 +27,9 @@ final class FamiliaEspecificacao {
                 predicados.add(cb.isTrue(root.get("ativa")));
             }
 
-            // unaccent (extensão da V1) dos dois lados: "Jose" acha "José" e
-            // vice-versa. No H2 dos testes, o alias UNACCENT de application-test.yml.
+            // sem acento, maiúscula nem apóstrofo dos dois lados (BuscaPorNome)
             if (filtro.busca() != null && !filtro.busca().isBlank()) {
-                String termo = "%" + escaparCuringas(filtro.busca().trim()) + "%";
-                Expression<String> nome = cb.function("unaccent", String.class, cb.lower(root.get("responsavelNome")));
-                Expression<String> busca = cb.function("unaccent", String.class, cb.lower(cb.literal(termo)));
-                predicados.add(cb.like(nome, busca, ESCAPE));
+                predicados.add(BuscaPorNome.contem(cb, root.get("responsavelNome"), filtro.busca()));
             }
 
             if (filtro.municipioId() != null) {
@@ -55,11 +50,4 @@ final class FamiliaEspecificacao {
         };
     }
 
-    /** "%" e "_" digitados na busca são texto, não curinga do LIKE. */
-    private static String escaparCuringas(String texto) {
-        return texto
-                .replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
-    }
 }
