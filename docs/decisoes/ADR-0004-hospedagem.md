@@ -43,3 +43,29 @@ do `next.config.mjs` repassa para a API (`API_URL`, variável do servidor do
 Next). Para o navegador, painel e API são o mesmo site; o cookie viaja, o
 CORS deixa de entrar no caminho do painel e a API pode ficar em qualquer host.
 O app do celular continua falando direto com a API (`extra.apiUrl`).
+
+## Adendo (05/10/2026): primeiro deploy no Render gratuito
+
+A API foi para o **Render, plano gratuito**, mesmo hibernando: roda o
+container Java sem custo e sem plano pago que vença depois da entrega
+(decisão 4). O que isso custou, e como foi contornado (passo a passo em
+[`docs/DEPLOY.md`](../DEPLOY.md)):
+
+- **Hibernação** (15 min parado, ~1 min para acordar): ping externo em
+  `GET /api/saude` a cada 10 minutos, **só das 6h às 22h**. O Render dá 750
+  horas de instância por mês por conta; 24 h × 31 dias = 744 h deixaria só 6 h
+  de folga, e a janela gasta ~500 h. Isso é paliativo, não solução.
+- **512 MB e 0,1 CPU**: imagem com JRE e flags de heap pequeno (`Dockerfile`),
+  medidas: pico de 481 MB com o fluxo completo. O login usa 64 MiB de heap por
+  vez (argon2id), então quatro logins ao mesmo tempo derrubam o processo, que
+  reinicia sozinho.
+- **Pooler do Neon** (decisão 2): mantido. A string do Neon é colada como vem em
+  `DATABASE_URL`; a API converte para JDBC e manda o Flyway pelo host direto
+  (`config/ConversorUrlBanco`). O pool de conexões fecha tudo depois de 2 min
+  ocioso, para não manter o Neon acordado (100 CU-hora/mês no gratuito).
+- **Região**: Render em Virginia e Neon em AWS us-east-1, um ao lado do outro.
+  O Render não tem região na América do Sul.
+
+A saída definitiva, se a associação passar a usar o sistema depois do
+semestre, é uma máquina que não hiberna: o `Dockerfile` não depende do Render
+e roda igual numa VM.

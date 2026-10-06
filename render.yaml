@@ -1,0 +1,49 @@
+# Blueprint do Render: cria o serviço da API a partir do Dockerfile.
+# No painel: New > Blueprint > este repositório. Passo a passo em docs/DEPLOY.md.
+#
+# Nenhum segredo aqui. As variáveis com "sync: false" o Render pede na hora de
+# criar o Blueprint; depois disso, são editadas só no painel do serviço
+# (Environment). APP_JWT_SEGREDO é gerado pelo próprio Render e ninguém precisa
+# vê-lo.
+services:
+  - type: web
+    name: cadastro-familias-api
+    runtime: docker
+    plan: free
+    # Mesma região do banco no Neon (AWS us-east-1, N. Virginia): cada tela faz
+    # várias consultas, e API e banco longe um do outro somam atraso em todas.
+    # O Render não tem região na América do Sul.
+    region: virginia
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/saude
+    # Todo merge na main publica. A main só recebe merge com CI verde
+    # (CONTRIBUTING.md).
+    autoDeployTrigger: commit
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      # A string de conexão do Neon, do jeito que o console mostra
+      # (postgresql://...-pooler...?sslmode=require). Ver docs/DEPLOY.md.
+      - key: DATABASE_URL
+        sync: false
+      # 256 bits aleatórios, gerados uma vez pelo Render. Para trocar (vazou?),
+      # edite o valor no painel: docs/DEPLOY.md, seção de segurança.
+      - key: APP_JWT_SEGREDO
+        generateValue: true
+      # URL do painel na Vercel, sem barra no fim. No primeiro deploy ela ainda
+      # não existe: use http://localhost:3000 e corrija depois (docs/DEPLOY.md).
+      - key: APP_CORS_ORIGENS
+        sync: false
+      - key: APP_COOKIE_SEGURO
+        value: "true"
+      # Atrás do proxy do Render: lê o IP real do X-Forwarded-For, para o limite
+      # de tentativas de ativação de agente não virar um limite único global.
+      - key: SERVER_FORWARD_HEADERS_STRATEGY
+        value: native
+      # Conta da usuária da associação, criada pelo perfil criar-usuario.
+      - key: APP_USUARIO_INICIAL_EMAIL
+        sync: false
+      - key: APP_USUARIO_INICIAL_NOME
+        value: Associação Amigos do Nordeste

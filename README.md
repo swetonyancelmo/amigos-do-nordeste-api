@@ -45,6 +45,9 @@ mvn spring-boot:run -Dspring-boot.run.profiles=criar-usuario
 A senha aparece **uma vez** no terminal. Gere o segredo do JWT com
 `openssl rand -base64 48`.
 
+Publicar (Neon + Render + Vercel, com o `Dockerfile` e o `render.yaml` da
+raiz): passo a passo em [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
 > O projeto não inclui o Maven Wrapper. Se quiserem fixar a versão do Maven para
 > todo mundo, rodem `mvn wrapper:wrapper` uma vez e commitem o `mvnw`, o
 > `mvnw.cmd` e a pasta `.mvn/`.

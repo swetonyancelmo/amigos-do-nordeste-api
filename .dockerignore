@@ -1,0 +1,16 @@
+# O build só precisa de pom.xml e src/. Tudo o mais fica de fora do contexto:
+# segredo (.env) nunca entra numa imagem, e postgres-data/ é do usuário do
+# Postgres e quebraria o "docker build" com permissão negada.
+.env
+.env.*
+!.env.example
+postgres-data/
+target/
+.git/
+.github/
+.idea/
+.vscode/
+.claude/
+docs/
+*.iml
+*.log
