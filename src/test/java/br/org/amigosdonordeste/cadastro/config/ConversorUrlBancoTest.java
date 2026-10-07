@@ -86,6 +86,8 @@ class ConversorUrlBancoTest {
         assertEquals("usuario_teste", ambiente.getProperty("DATABASE_USUARIO"));
         assertEquals("senha_teste", ambiente.getProperty("DATABASE_SENHA"));
         assertEquals(JDBC_DIRETA, ambiente.getProperty("spring.flyway.url"));
+        assertEquals("usuario_teste", ambiente.getProperty("spring.flyway.user"));
+        assertEquals("senha_teste", ambiente.getProperty("spring.flyway.password"));
     }
 
     @Test

@@ -39,6 +39,8 @@ public class ConversorUrlBanco implements EnvironmentPostProcessor, Ordered {
     static final String VARIAVEL_USUARIO = "DATABASE_USUARIO";
     static final String VARIAVEL_SENHA = "DATABASE_SENHA";
     static final String FLYWAY_URL = "spring.flyway.url";
+    static final String FLYWAY_USUARIO = "spring.flyway.user";
+    static final String FLYWAY_SENHA = "spring.flyway.password";
 
     private static final String JDBC = "jdbc:postgresql://";
     private static final String MARCA_POOLER = "-pooler.";
@@ -77,8 +79,16 @@ public class ConversorUrlBanco implements EnvironmentPostProcessor, Ordered {
             valores.put(VARIAVEL_SENHA, conexao.senha());
         }
         if (conexao.urlJdbcDireta() != null && !temValor(ambiente, FLYWAY_URL)) {
-            // Usuario e senha do Flyway caem nos do datasource quando ausentes.
+            // Com URL propria, o Flyway abre a conexao sozinha e nao herda de
+            // forma confiavel as credenciais do datasource (deploy no Render
+            // falhou com "no password was provided"): passa-se explicitamente.
             valores.put(FLYWAY_URL, conexao.urlJdbcDireta());
+            if (conexao.usuario() != null && !temValor(ambiente, FLYWAY_USUARIO)) {
+                valores.put(FLYWAY_USUARIO, conexao.usuario());
+            }
+            if (conexao.senha() != null && !temValor(ambiente, FLYWAY_SENHA)) {
+                valores.put(FLYWAY_SENHA, conexao.senha());
+            }
             log.info("Flyway migra pelo host direto do Neon (" + hostDe(conexao.urlJdbcDireta())
                 + "), sem o pooler.");
         }
