@@ -1,35 +1,71 @@
 package br.org.amigosdonordeste.cadastro.auth;
 
-import br.org.amigosdonordeste.cadastro.agente.AgenteRepositorio;
+import br.org.amigosdonordeste.cadastro.usuario.Papel;
+import br.org.amigosdonordeste.cadastro.usuario.Usuario;
+import br.org.amigosdonordeste.cadastro.usuario.UsuarioRepositorio;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
 
-@WebMvcTest(AuthController.class)
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/** Dados fictícios — nenhum nome real entra em teste. */
+@SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AuthControllerTest {
 
-  @Autowired
-  private MockMvc mockMvc;
+    @Autowired MockMvc mvc;
+    @Autowired UsuarioRepositorio usuarios;
+    @Autowired PasswordEncoder codificador;
 
-  @MockitoBean
-  private JwtService jwtService;
+    private Usuario criarUsuario(String senha) {
+        Usuario usuario = new Usuario();
+        usuario.setNome("Usuária de Teste");
+        usuario.setEmail("login-" + UUID.randomUUID() + "@teste.local");
+        usuario.setSenhaHash(codificador.encode(senha));
+        usuario.setPapel(Papel.ADMIN);
+        return usuarios.save(usuario);
+    }
 
-  @MockitoBean
-  private AgenteRepositorio agenteRepositorio;
+    private static String corpo(String email, String senha) {
+        return "{\"email\":\"" + email + "\",\"senha\":\"" + senha + "\"}";
+    }
 
-  @MockitoBean
-  private AuthService authService;
+    @Test
+    @DisplayName("login devolve o token e grava o refresh em cookie httpOnly")
+    void loginGravaCookie() throws Exception {
+        Usuario usuario = criarUsuario("SenhaDeTeste123");
 
-  // outros @MockitoBean que o filtro/config exigirem
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(corpo(usuario.getEmail(), "SenhaDeTeste123")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").isNotEmpty())
+            .andExpect(jsonPath("$.usuario.email").value(usuario.getEmail()))
+            .andExpect(header().string("Set-Cookie", containsString("and_refresh=")))
+            .andExpect(header().string("Set-Cookie", containsString("HttpOnly")));
+    }
 
-  @Test
-  void deveFazerLoginEGravarCookie() throws Exception {
-    // when(authService.login(...)).thenReturn(...);
-    // mockMvc.perform(post("/auth/login")...)
-  }
+    @Test
+    @DisplayName("login com senha errada responde 401 e não grava cookie")
+    void loginSenhaErrada() throws Exception {
+        Usuario usuario = criarUsuario("SenhaDeTeste123");
+
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(corpo(usuario.getEmail(), "outra-senha")))
+            .andExpect(status().isUnauthorized())
+            .andExpect(header().doesNotExist("Set-Cookie"));
+    }
 }

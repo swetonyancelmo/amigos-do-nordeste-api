@@ -1,0 +1,3 @@
+# Aceita a string de conexao do Neon em DATABASE_URL (ver ConversorUrlBanco).
+org.springframework.boot.env.EnvironmentPostProcessor=\
+br.org.amigosdonordeste.cadastro.config.ConversorUrlBanco
