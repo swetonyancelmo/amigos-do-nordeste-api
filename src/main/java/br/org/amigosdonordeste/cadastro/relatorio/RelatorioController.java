@@ -70,4 +70,12 @@ public class RelatorioController {
             @RequestParam(required = false) UUID municipioId) {
         return relatorioService.situacao(comunidadeId, municipioId);
     }
+
+    @Operation(summary = "Mapa: famílias agrupadas por comunidade, um ponto por comunidade (ADR-0005)")
+    @GetMapping("/mapa")
+    public PontosPorComunidadeResponse mapa(
+            @Parameter(description = "Filtra por município; omitido, traz todas as comunidades e municipio vem null")
+            @RequestParam(required = false) UUID municipioId) {
+        return relatorioService.mapa(municipioId);
+    }
 }

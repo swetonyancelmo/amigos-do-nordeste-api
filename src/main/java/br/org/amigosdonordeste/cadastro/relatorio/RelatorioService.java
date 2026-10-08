@@ -20,6 +20,7 @@ import br.org.amigosdonordeste.cadastro.familia.enums.AbastecimentoAgua;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.TipoFonteRenda;
 import br.org.amigosdonordeste.cadastro.municipio.Municipio;
+import br.org.amigosdonordeste.cadastro.municipio.MunicipioNaoEncontradoException;
 import br.org.amigosdonordeste.cadastro.municipio.MunicipioRepositorio;
 import br.org.amigosdonordeste.cadastro.pessoa.PessoaRepositorio;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.FaixaEtaria;
@@ -50,7 +51,18 @@ public class RelatorioService {
         this.municipioRepositorio = municipioRepositorio;
     }
 
-    public NecessidadesResponse necessidades(UUID comunidadeId, UUID municipioId, boolean todasIdades) {
+  /** Mapa: um ponto por comunidade; com municipioId, devolve também o município (e o código IBGE). */
+  public PontosPorComunidadeResponse mapa(UUID municipioId) {
+    MunicipioResponse municipio = null;
+    if (municipioId != null) {
+      Municipio m = municipioRepositorio.findById(municipioId)
+        .orElseThrow(() -> new MunicipioNaoEncontradoException(municipioId));
+      municipio = new MunicipioResponse(m.getId(), m.getNome(), m.getCodigoIbge());
+    }
+    return new PontosPorComunidadeResponse(municipio, comunidadeRepositorio.contarFamiliasPorComunidade(municipioId));
+  }
+
+  public NecessidadesResponse necessidades(UUID comunidadeId, UUID municipioId, boolean todasIdades) {
         long totalFamilias = familiaRepositorio.contarParaRelatorioNecessidades(comunidadeId, municipioId);
 
         List<PessoaResponse> pessoas = pessoaRepositorio
