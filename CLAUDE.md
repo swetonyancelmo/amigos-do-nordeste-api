@@ -12,7 +12,7 @@ PostgreSQL 16 (Neon em produção) · springdoc-openapi · jjwt · Maven (sem wr
 
 ## Estado atual
 
-Auth e boa parte do domínio já estão prontos. Cada pacote em
+O domínio está completo para o que o web e o app consomem. Cada pacote em
 `src/main/java/br/org/amigosdonordeste/cadastro/` é um módulo:
 
 | Pacote | Rotas | O que faz |
@@ -22,19 +22,27 @@ Auth e boa parte do domínio já estão prontos. Cada pacote em
 | `municipio` | `/api/municipios` | CRUD sem exclusão, `codigo_ibge` único |
 | `comunidade` | `/api/comunidades`, `/api/comunidades/opcoes` | CRUD com lat/long; `/opcoes` é a lista enxuta da agente |
 | `familia` | `/api/familias` | cria/edita família com pessoas e fontes de renda numa chamada; lista paginada com filtros; inativar/reativar |
-| `pessoa` | `/api/pessoas`, `/api/familias/{id}/pessoas` | lista com filtros, ficha, inclui, edita, remove |
+| `pessoa` | `/api/pessoas`, `/api/pessoas/{id}/mover`, `/api/familias/{id}/pessoas` | lista com filtros, ficha, inclui, edita, **muda de família**, remove |
 | `fonterenda` | — (dentro de família) | entidade e enums de renda |
 | `metadados` | `/api/metadados` (público) | todas as listas fechadas com rótulo |
-| `relatorio` | `/api/relatorios/{necessidades,situacao}` | roupa/calçado por tamanho; indicadores de situação |
+| `relatorio` | `/api/relatorios/{necessidades,necessidades.xlsx,situacao,mapa}` | roupa/calçado por tamanho (JSON e planilha Excel com abas Necessidades, Famílias e Pessoas); indicadores de situação; mapa com um ponto por comunidade |
 | `agente` | `/api/agentes`, `/api/agentes/{id}/novo-convite`, `/api/agentes/ativar` (público, com limite por IP) | painel cadastra a agente e gera o convite; o aparelho troca o código pelo token |
 | `precadastro` | `/api/pre-cadastros`, `/api/pre-cadastros/situacao` | agente envia (idempotente; devolvido reenviado volta à fila) e consulta a situação; admin lista, detalha, aprova (vira família) ou devolve |
-| `comum` | `/api/saude` | erros (`ManipuladorDeErros`), `PaginaResposta`, `LimitadorPorIp` |
-| `dominio` | — | `Idade` (cálculo com idade estimada datada), `NumerosCalcado`, `Rotulavel` |
+| `comum` | `/api/saude` (público) | erros (`ManipuladorDeErros`), `PaginaResposta`, `LimitadorPorIp`, `BuscaPorNome` |
+| `config` | — | `SegurancaConfig` (rotas e papéis), `OpenApiConfig`, `ConversorUrlBanco` (string do Neon → JDBC) |
+| `dominio` | — | `Idade` (cálculo com idade estimada datada), `Cpf`, `NumerosCalcado`, `Rotulavel` |
 
-Migrações Flyway: V1 a V14 (a próxima é `V15__…`).
+Migrações Flyway: V1 a V14 (a próxima é `V15__…`). Duas mudanças de modelo
+que o código antigo e as ADRs podem não refletir: a **faixa de renda é da
+família** (`familia.faixa_renda`, V14; a fonte de renda guarda só tipo e dono) e
+`familia.ativa` (V12) controla a inativação.
 
-**Ainda não existem:** rota de mapa (`/api/relatorios/mapa`, citada pelo web)
-e exportação para Excel (RF-05).
+Sem rota para: perfil (`/api/usuario`), exclusão de família, município ou
+comunidade, desativar ou renomear agente. `Papel` só tem `ADMIN`; a agente não é
+usuário, é um aparelho com token (`ROLE_AGENTE`, tabela `agente`).
+
+`mvn verify` passa com 191 testes (conferido em 08/10/2026). O CI
+(`.github/workflows/ci.yml`) roda o mesmo com um Postgres de serviço.
 
 Ao ajudar aqui, **não construa módulos inteiros por iniciativa própria.** O
 time trabalha por issues no Kanban. Faça a tarefa pedida, no tamanho pedido.
@@ -63,7 +71,9 @@ time trabalha por issues no Kanban. Faça a tarefa pedida, no tamanho pedido.
 7. **Data de nascimento é opcional**; existe `idadeEstimada` + `idadeEstimadaEm`
    (os dois juntos ou nenhum, garantido por `CHECK` no banco). Nunca torne a
    data obrigatória. Pessoa sem nome é aceita com `cadastroIncompleto`.
-8. **Mapa é por comunidade**, nunca por família.
+8. **Mapa é por comunidade**, nunca por família: `GET /api/relatorios/mapa`
+   devolve `{ municipio | null, pontos[] }`, um ponto por comunidade com a
+   contagem de famílias ativas (nunca uma lista de famílias).
 9. **Entidade não vira resposta de API.** Use sempre um `record` de DTO.
 10. **Família não se apaga, se inativa** (issue #43, V12). Inativa some de
     listagem, contagem e relatório. Não crie `DELETE /api/familias/{id}`.
@@ -73,6 +83,16 @@ time trabalha por issues no Kanban. Faça a tarefa pedida, no tamanho pedido.
     (resposta `JA_RECEBIDO`). Não gere esse id no servidor.
 12. Dado real de família não entra em migração de exemplo, teste ou exemplo.
     Log não imprime CPF, senha nem token.
+13. **Aprovar pré-cadastro passa por `FamiliaService.criar`**, o mesmo caminho
+    do `POST /api/familias`. Não crie uma segunda definição de "família válida".
+    O app só coleta responsável, telefone, comunidade, ponto de referência e
+    pessoas (nome, sexo, idade); parentesco, série, roupa, calçado, moradia e
+    renda entram no corpo de `/aprovar`.
+14. A agente só enxerga o que enviou: `GET /api/pre-cadastros/situacao` filtra
+    pela agente do token e devolve só id, situação e motivo da devolução.
+    `POST /api/agentes/ativar` é público e limitado a 5 tentativas por minuto
+    por IP (`LimitadorPorIp`); atrás de proxy, ligue
+    `SERVER_FORWARD_HEADERS_STRATEGY=native` ou o limite vira global.
 
 ## Testes
 

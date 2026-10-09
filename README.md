@@ -8,7 +8,9 @@ do Nordeste**, no Sertão do Moxotó (PE).
 A API atende dois clientes: o **painel web** da associação e o **app de campo**
 da agente de saúde, que envia pré-cadastros para aprovação. O projeto começou só
 com a autenticação, para o time não gastar tempo com Spring Security. O domínio
-foi construído depois, a partir das tarefas do quadro Kanban.
+foi construído depois, a partir das tarefas do quadro Kanban, e hoje cobre
+famílias, pessoas, comunidades, pré-cadastros, agentes e relatórios (incluindo
+Excel e mapa).
 
 | | |
 |---|---|
@@ -87,8 +89,12 @@ de cada corpo e resposta está no Swagger.
 | `GET /api/familias/{id}` | Ficha completa: comunidade, município, membros, fontes de renda e totais calculados. |
 | `POST /api/familias`, `PUT /api/familias/{id}` | Família com pessoas e fontes de renda numa chamada só (o `PUT` faz merge). |
 | `POST /api/familias/{id}/inativar` · `/reativar` | Família não se apaga: inativa some de listagem, contagem e relatório. |
-| `GET /api/pessoas`, `GET /api/pessoas/{id}` | Lista com filtros (`nome`, `comunidadeId`, `municipioId`, `familiaId`, `cadastroIncompleto`, `estuda`, `faixaEtaria`, `pagina`, `tamanho`) e ficha. |
+| `GET /api/pessoas`, `GET /api/pessoas/{id}` | Lista com filtros (`nome`, `comunidadeId`, `municipioId`, `familiaId`, `cadastroIncompleto`, `estuda`, `faixaEtaria`, `pagina`, `tamanho`; 20 por página, máx. 100) e ficha. |
 | `POST /api/familias/{familiaId}/pessoas`, `PUT/DELETE /api/pessoas/{id}` | Inclui, edita e remove pessoa de uma família. |
+| `POST /api/pessoas/{id}/mover` | Muda a pessoa para outra família (corrige família escolhida errada); a comunidade acompanha a família. |
+
+Não há `DELETE` de família, município ou comunidade, e município e comunidade só
+têm criar, listar, buscar e editar.
 
 ### Pré-cadastro (app de campo)
 
@@ -106,15 +112,28 @@ de cada corpo e resposta está no Swagger.
 | Rota | O que faz |
 |---|---|
 | `GET /api/relatorios/necessidades` | Roupa e calçado por tamanho (`comunidadeId`, `municipioId`, `todasIdades`; padrão: só até 12 anos). |
-| `GET /api/relatorios/situacao` | Indicadores de situação das famílias, em valor e percentual (`comunidadeId`, `municipioId`). |
+| `GET /api/relatorios/necessidades.xlsx` | O mesmo relatório em Excel, com abas de Necessidades, Famílias e Pessoas (backup, RF-05). Mesmos filtros. |
+| `GET /api/relatorios/situacao` | Indicadores de situação das famílias (sem banheiro, só carro-pipa, só Bolsa Família, sem tratamento de água), em valor e percentual (`comunidadeId`, `municipioId`). |
+| `GET /api/relatorios/mapa` | Um ponto por comunidade, com latitude, longitude e contagem de famílias ativas (`municipioId` opcional). Nunca um ponto por família (ADR-0005). |
 
 ### Ainda não existe
 
-- `GET /api/relatorios/mapa` (pontos por comunidade, ADR-0005);
-- exportação para Excel (RF-05);
-- rota para criar agente e gerar código de convite: hoje o registro é inserido
-  direto na tabela `agente`;
-- rota para o aparelho saber se o pré-cadastro foi aprovado ou devolvido.
+- exclusão de família (de propósito: ela é inativada), de município e de
+  comunidade;
+- rota de perfil (`/api/usuario`): nome e e-mail vêm na resposta do login;
+- rota para desativar ou renomear uma agente;
+- papéis além de `ADMIN`, campanhas e biblioteca de fotos e vídeos (questões
+  Q-01, Q-02 e Q-04 em `docs/requisitos.md`).
+
+### O que muda no pré-cadastro até virar família
+
+O app só coleta responsável, telefone, comunidade, ponto de referência e as
+pessoas (nome, sexo e idade). Na aprovação, quem revisa completa em
+`POST /api/pre-cadastros/{id}/aprovar`: CPF, moradia (banheiro, escoamento,
+tratamento e abastecimento de água), **faixa de renda da casa** e fontes de
+renda, e por pessoa o parentesco, a série, o tamanho de roupa e o número do
+calçado. Aprovar com `{}` funciona, mas a família fica de fora do relatório de
+necessidades até esses tamanhos serem preenchidos.
 
 ### Sobre o cadastro de usuário
 
@@ -147,8 +166,8 @@ public List<Coisa> listar(@AuthenticationPrincipal String usuarioId) { … }
 ```
 
 Cada tabela ou coluna nova entra como uma migração nova em
-`src/main/resources/db/migration`. Já existem V1 a V12, então a próxima é
-`V13__descricao.sql`. `ddl-auto` é `none` em todo ambiente, e **migração que já
+`src/main/resources/db/migration`. Já existem V1 a V14, então a próxima é
+`V15__descricao.sql`. `ddl-auto` é `none` em todo ambiente, e **migração que já
 rodou no banco de alguém nunca se edita**: o Flyway acusa checksum diferente.
 
 Enum novo que aparece em tela implementa `Rotulavel` e entra em
@@ -161,7 +180,7 @@ mvn verify                        # o CI roda o mesmo
 mvn test -Dtest=PreCadastroTest   # um teste só
 ```
 
-Os testes de integração rodam com o perfil `test`: **H2 em memória, schema
+São 191 testes (conferido em 08/10/2026). Os de integração rodam com o perfil `test`: **H2 em memória, schema
 gerado pelo Hibernate e Flyway desligado**. Por isso `mvn verify` não pega erro
 de migração. Depois de criar uma, suba a API contra o Postgres do docker e
 confira se ela aplica.
