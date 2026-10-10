@@ -14,6 +14,9 @@ public record MetadadosResponse(
     List<OpcaoDTO> serie,
     List<OpcaoDTO> tamanhoRoupa,
     List<OpcaoDTO> numeroCalcado,
-    List<OpcaoDTO> situacaoPreCadastro
+    List<OpcaoDTO> situacaoPreCadastro,
+    // valor = código do estrato (R3...), rótulo = texto da base de conhecimento
+    // (ADR-0010), na ordem de prioridade
+    List<OpcaoDTO> estratoVulnerabilidade
 ) {
 }

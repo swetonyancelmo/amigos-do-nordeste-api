@@ -12,8 +12,10 @@ import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
@@ -45,7 +47,10 @@ public record CriarFamiliaRequisicao(
         // pode vir vazia: família cadastrada antes dos membros
         @NotNull @Valid List<CriarPessoa> pessoas,
         @NotNull @Valid List<CriarFonteRenda> fontesRenda,
-        String observacoes
+        String observacoes,
+        // cômodos do domicílio, para a relação morador/cômodo (ADR-0010).
+        // null = não informado, nunca zero.
+        @Positive @Max(99) Integer numeroComodos
 ) implements CamposFamilia {
 
     public record CriarPessoa(

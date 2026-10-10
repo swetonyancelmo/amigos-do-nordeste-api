@@ -1,6 +1,8 @@
 package br.org.amigosdonordeste.cadastro.familia;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.HashSet;
@@ -10,6 +12,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,7 @@ import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
 import br.org.amigosdonordeste.cadastro.comunidade.exception.ComunidadeNaoEncontradaException;
 import br.org.amigosdonordeste.cadastro.dominio.Cpf;
 import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaFiltroDTO;
+import br.org.amigosdonordeste.cadastro.familia.dto.OrdenacaoFamilia;
 import br.org.amigosdonordeste.cadastro.familia.exception.CpfInvalidoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.CpfJaCadastradoException;
 import br.org.amigosdonordeste.cadastro.familia.exception.FamiliaNaoEncontradaException;
@@ -37,6 +41,10 @@ import br.org.amigosdonordeste.cadastro.fonterenda.FonteRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 import br.org.amigosdonordeste.cadastro.pessoa.PessoaService;
 import br.org.amigosdonordeste.cadastro.pessoa.PessoaService.Origem;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.AvaliacaoVulnerabilidadeService;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.Avaliacao;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.BaseDeConhecimento;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.EstratoRisco;
 
 @Service
 @Transactional
@@ -46,12 +54,18 @@ public class FamiliaService {
     private final ComunidadeRepositorio comunidadeRepositorio;
     // campos de pessoa e remoção de membro: a mesma regra da tela de pessoa
     private final PessoaService pessoaService;
+    // sugestão de prioridade (ADR-0010): só lida, nunca gravada
+    private final AvaliacaoVulnerabilidadeService avaliacaoVulnerabilidade;
+
+    /** Ids por consulta "in (...)" ao avaliar a lista inteira. */
+    private static final int LOTE_AVALIACAO = 500;
 
     public FamiliaService(FamiliaRepositorio familiaRepositorio, ComunidadeRepositorio comunidadeRepositorio,
-                          PessoaService pessoaService) {
+                          PessoaService pessoaService, AvaliacaoVulnerabilidadeService avaliacaoVulnerabilidade) {
         this.familiaRepositorio = familiaRepositorio;
         this.comunidadeRepositorio = comunidadeRepositorio;
         this.pessoaService = pessoaService;
+        this.avaliacaoVulnerabilidade = avaliacaoVulnerabilidade;
     }
 
     /**
@@ -62,7 +76,7 @@ public class FamiliaService {
     public FamiliaDetalheResponse buscarPorId(UUID id) {
         Familia familia = familiaRepositorio.buscarDetalhePorId(id)
                 .orElseThrow(() -> new FamiliaNaoEncontradaException(id));
-        return FamiliaDetalheResponse.fromEntity(familia);
+        return FamiliaDetalheResponse.fromEntity(familia, avaliacaoVulnerabilidade.avaliar(familia));
     }
 
     /**
@@ -73,6 +87,10 @@ public class FamiliaService {
      */
     @Transactional(readOnly = true)
     public PaginaResposta<FamiliaResumoResponse> listar(FamiliaFiltroDTO filtro) {
+        if (filtro.dependeDaAvaliacao()) {
+            return listarPorAvaliacao(filtro);
+        }
+
         // id desempata nomes iguais — sem ele a mesma família pode aparecer
         // em duas páginas (ou em nenhuma)
         PageRequest pageable = PageRequest.of(
@@ -92,11 +110,64 @@ public class FamiliaService {
         }
 
         // devolve na ordem da página, não na ordem do "in (...)"
+        BaseDeConhecimento base = avaliacaoVulnerabilidade.carregarBase();
+        LocalDate hoje = LocalDate.now();
         List<FamiliaResumoResponse> itens = ids.stream()
                 .map(carregadasPorId::get)
-                .map(FamiliaResumoResponse::fromEntity)
+                .map(f -> FamiliaResumoResponse.fromEntity(f, AvaliacaoVulnerabilidadeService.avaliar(f, base, hoje)))
                 .toList();
         return PaginaResposta.de(pagina, itens);
+    }
+
+    /**
+     * Filtro ou ordem por estrato (ADR-0010). O estrato é calculado, nunca
+     * coluna, então o banco não filtra nem ordena por ele: aqui se avaliam
+     * todas as famílias que passam pelos outros filtros e a página é cortada
+     * em memória. Com ~2.500 famílias, são algumas dezenas de consultas
+     * pequenas (pessoas em lotes; fontes e abastecimento pelo @BatchSize).
+     */
+    private PaginaResposta<FamiliaResumoResponse> listarPorAvaliacao(FamiliaFiltroDTO filtro) {
+        List<UUID> ids = familiaRepositorio
+                .findAll(FamiliaEspecificacao.comFiltro(filtro), Sort.by("responsavelNome", "id"))
+                .stream()
+                .map(Familia::getId)
+                .toList();
+
+        BaseDeConhecimento base = avaliacaoVulnerabilidade.carregarBase();
+        LocalDate hoje = LocalDate.now();
+        Map<UUID, Familia> carregadasPorId = new HashMap<>();
+        for (int i = 0; i < ids.size(); i += LOTE_AVALIACAO) {
+            List<UUID> lote = ids.subList(i, Math.min(i + LOTE_AVALIACAO, ids.size()));
+            familiaRepositorio.buscarComPessoasPorIds(lote).forEach(f -> carregadasPorId.put(f.getId(), f));
+        }
+
+        Set<EstratoRisco> estratos = filtro.estrato() == null || filtro.estrato().isEmpty()
+                ? null
+                : Set.copyOf(filtro.estrato());
+        List<FamiliaResumoResponse> avaliadas = new ArrayList<>();
+        Map<UUID, Avaliacao> avaliacoes = new HashMap<>();
+        for (UUID id : ids) {
+            Familia familia = carregadasPorId.get(id);
+            Avaliacao avaliacao = AvaliacaoVulnerabilidadeService.avaliar(familia, base, hoje);
+            if (estratos == null || estratos.contains(avaliacao.estrato())) {
+                avaliadas.add(FamiliaResumoResponse.fromEntity(familia, avaliacao));
+                avaliacoes.put(id, avaliacao);
+            }
+        }
+
+        if (filtro.ordenacao() == OrdenacaoFamilia.PRIORIDADE) {
+            // ordem dos estratos na base; dentro dele, mais pontos confirmados
+            // primeiro; empate fica na ordem por nome que já veio do banco
+            avaliadas.sort(Comparator
+                    .comparingInt((FamiliaResumoResponse r) -> base.corte(r.vulnerabilidade().estrato()).ordem())
+                    .thenComparing(r -> -avaliacoes.get(r.id()).pontosConfirmados()));
+        }
+
+        PageRequest pageable = PageRequest.of(filtro.paginaNormalizada(), filtro.porPaginaNormalizada());
+        int inicio = (int) Math.min(pageable.getOffset(), avaliadas.size());
+        int fim = Math.min(inicio + pageable.getPageSize(), avaliadas.size());
+        List<FamiliaResumoResponse> itens = avaliadas.subList(inicio, fim);
+        return PaginaResposta.de(new PageImpl<>(itens, pageable, avaliadas.size()), itens);
     }
 
     /**
@@ -106,14 +177,14 @@ public class FamiliaService {
     public FamiliaResumoResponse inativar(UUID id) {
         Familia familia = buscarParaAlterar(id);
         familia.inativar();
-        return FamiliaResumoResponse.fromEntity(familia);
+        return FamiliaResumoResponse.fromEntity(familia, avaliacaoVulnerabilidade.avaliar(familia));
     }
 
     /** Issue #43: desfaz inativar(). Reativar uma ativa não é erro. */
     public FamiliaResumoResponse reativar(UUID id) {
         Familia familia = buscarParaAlterar(id);
         familia.reativar();
-        return FamiliaResumoResponse.fromEntity(familia);
+        return FamiliaResumoResponse.fromEntity(familia, avaliacaoVulnerabilidade.avaliar(familia));
     }
 
     private Familia buscarParaAlterar(UUID id) {
@@ -308,6 +379,7 @@ public class FamiliaService {
         familia.setTratamentoAgua(request.tratamentoAgua());
         familia.setFaixaRenda(request.faixaRenda());
         familia.setObservacoes(request.observacoes());
+        familia.setNumeroComodos(request.numeroComodos());
 
         familia.getAbastecimentoAgua().clear();
         if (request.abastecimentoAgua() != null) {

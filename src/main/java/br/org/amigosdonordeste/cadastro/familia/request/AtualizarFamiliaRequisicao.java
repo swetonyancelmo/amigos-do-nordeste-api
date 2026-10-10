@@ -12,8 +12,10 @@ import br.org.amigosdonordeste.cadastro.pessoa.enums.Sexo;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -42,7 +44,10 @@ public record AtualizarFamiliaRequisicao(
         FaixaRenda faixaRenda,
         @NotNull @Valid List<AtualizarPessoa> pessoas,
         @NotNull @Valid List<AtualizarFonteRenda> fontesRenda,
-        String observacoes
+        String observacoes,
+        // cômodos do domicílio, para a relação morador/cômodo (ADR-0010).
+        // null = não informado, nunca zero.
+        @Positive @Max(99) Integer numeroComodos
 ) implements CamposFamilia {
 
     public record AtualizarPessoa(

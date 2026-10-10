@@ -95,6 +95,15 @@ public class Familia {
     @Column(name = "faixa_renda", length = 30)
     private FaixaRenda faixaRenda;
 
+    /**
+     * Número de cômodos do domicílio (V17), para a relação morador/cômodo da
+     * avaliação de vulnerabilidade (ADR-0010). null = não informado, que é o
+     * caso de todo cadastro antigo. O número de moradores não é coluna: é
+     * pessoas.size().
+     */
+    @Column(name = "numero_comodos")
+    private Integer numeroComodos;
+
     @Column(columnDefinition = "text")
     private String observacoes;
 

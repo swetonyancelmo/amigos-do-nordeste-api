@@ -5,6 +5,8 @@ import java.util.UUID;
 import br.org.amigosdonordeste.cadastro.dominio.Idade;
 import br.org.amigosdonordeste.cadastro.pessoa.Pessoa;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.FaixaEtaria;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.Avaliacao;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.EstratoRisco;
 
 /**
  * Uma linha de GET /api/familias (issue #16) — também a resposta de
@@ -13,6 +15,9 @@ import br.org.amigosdonordeste.cadastro.pessoa.enums.FaixaEtaria;
  * Os totais são contados na hora a partir de pessoas (regra 2: nunca coluna).
  * Na listagem, pessoas já vem no join fetch de buscarComPessoasPorIds; as três
  * faixas mais totalSemIdadeConhecida somam totalPessoas, como na ficha.
+ *
+ * vulnerabilidade é o resumo da avaliação (ADR-0010); a explicação inteira
+ * fica na ficha (GET /api/familias/{id}).
  */
 public record FamiliaResumoResponse(
         UUID id,
@@ -26,9 +31,18 @@ public record FamiliaResumoResponse(
         int totalAte12Anos,
         int totalDe13A59Anos,
         int total60AnosOuMais,
-        int totalSemIdadeConhecida
+        int totalSemIdadeConhecida,
+        Vulnerabilidade vulnerabilidade
 ) {
-    public static FamiliaResumoResponse fromEntity(Familia familia) {
+    /** escore null em DADOS_INSUFICIENTES; pontosConfirmados é o que já se sabe. */
+    public record Vulnerabilidade(EstratoRisco estrato, String rotulo, Integer escore, int pontosConfirmados) {
+        static Vulnerabilidade de(Avaliacao avaliacao) {
+            return new Vulnerabilidade(avaliacao.estrato(), avaliacao.rotulo(), avaliacao.escore(),
+                    avaliacao.pontosConfirmados());
+        }
+    }
+
+    public static FamiliaResumoResponse fromEntity(Familia familia, Avaliacao avaliacao) {
         int ate12 = 0;
         int de13a59 = 0;
         int de60ouMais = 0;
@@ -64,6 +78,7 @@ public record FamiliaResumoResponse(
                 ate12,
                 de13a59,
                 de60ouMais,
-                semIdade);
+                semIdade,
+                Vulnerabilidade.de(avaliacao));
     }
 }

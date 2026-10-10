@@ -2,6 +2,8 @@ package br.org.amigosdonordeste.cadastro.relatorio;
 
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import br.org.amigosdonordeste.cadastro.comunidade.Comunidade;
 import br.org.amigosdonordeste.cadastro.comunidade.ComunidadeRepositorio;
 import br.org.amigosdonordeste.cadastro.dominio.NumerosCalcado;
+import br.org.amigosdonordeste.cadastro.familia.Familia;
 import br.org.amigosdonordeste.cadastro.familia.FamiliaDetalheResponse;
 import br.org.amigosdonordeste.cadastro.familia.FamiliaRepositorio;
 import br.org.amigosdonordeste.cadastro.familia.PessoaResponse;
@@ -27,6 +30,16 @@ import br.org.amigosdonordeste.cadastro.pessoa.enums.FaixaEtaria;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.TamanhoRoupa;
 import br.org.amigosdonordeste.cadastro.relatorio.NecessidadesResponse.ItemContagem;
 import br.org.amigosdonordeste.cadastro.relatorio.SituacaoResponse.Indicador;
+import br.org.amigosdonordeste.cadastro.relatorio.VulnerabilidadeResponse.CampoFaltante;
+import br.org.amigosdonordeste.cadastro.relatorio.VulnerabilidadeResponse.ContagemEstrato;
+import br.org.amigosdonordeste.cadastro.relatorio.VulnerabilidadeResponse.PorComunidade;
+import br.org.amigosdonordeste.cadastro.relatorio.VulnerabilidadeResponse.PorMunicipio;
+import br.org.amigosdonordeste.cadastro.relatorio.VulnerabilidadeResponse.SentinelaNaoAvaliada;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.AvaliacaoVulnerabilidadeService;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.Avaliacao;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.BaseDeConhecimento;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.BaseDeConhecimento.CorteEstrato;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.EstratoRisco;
 
 /**
  * Issue #18: é este relatório que justifica o sistema inteiro — responde
@@ -42,13 +55,16 @@ public class RelatorioService {
     private final PessoaRepositorio pessoaRepositorio;
     private final ComunidadeRepositorio comunidadeRepositorio;
     private final MunicipioRepositorio municipioRepositorio;
+    private final AvaliacaoVulnerabilidadeService avaliacaoVulnerabilidade;
 
     public RelatorioService(FamiliaRepositorio familiaRepositorio, PessoaRepositorio pessoaRepositorio,
-            ComunidadeRepositorio comunidadeRepositorio, MunicipioRepositorio municipioRepositorio) {
+            ComunidadeRepositorio comunidadeRepositorio, MunicipioRepositorio municipioRepositorio,
+            AvaliacaoVulnerabilidadeService avaliacaoVulnerabilidade) {
         this.familiaRepositorio = familiaRepositorio;
         this.pessoaRepositorio = pessoaRepositorio;
         this.comunidadeRepositorio = comunidadeRepositorio;
         this.municipioRepositorio = municipioRepositorio;
+        this.avaliacaoVulnerabilidade = avaliacaoVulnerabilidade;
     }
 
   /** Mapa: um ponto por comunidade; com municipioId, devolve também o município (e o código IBGE). */
@@ -169,5 +185,91 @@ public class RelatorioService {
                         comunidadeId, municipioId, TipoFonteRenda.BOLSA_FAMILIA), totalFamilias),
                 Indicador.de(familiaRepositorio.contarPorTratamentoAgua(
                         comunidadeId, municipioId, TratamentoAgua.SEM_TRATAMENTO), totalFamilias));
+    }
+
+    /**
+     * ADR-0010: distribuição das famílias ativas por estrato, no total, por
+     * município e por comunidade. Avalia cada família na hora (o estrato não
+     * é coluna). Mesmo escopo e mesma consulta da exportação de necessidades.
+     * Só contagens saem daqui: nunca nome nem lista de famílias.
+     */
+    public VulnerabilidadeResponse vulnerabilidade(UUID comunidadeId, UUID municipioId) {
+        BaseDeConhecimento base = avaliacaoVulnerabilidade.carregarBase();
+        LocalDate hoje = LocalDate.now();
+
+        List<Familia> familias = familiaRepositorio.buscarParaExportacaoNecessidades(comunidadeId, municipioId);
+
+        Map<EstratoRisco, Long> total = new EnumMap<>(EstratoRisco.class);
+        Map<UUID, Municipio> municipios = new LinkedHashMap<>();
+        Map<UUID, Map<EstratoRisco, Long>> porMunicipio = new LinkedHashMap<>();
+        Map<UUID, Comunidade> comunidades = new LinkedHashMap<>();
+        Map<UUID, Map<EstratoRisco, Long>> porComunidade = new LinkedHashMap<>();
+        Map<String, Long> faltas = new LinkedHashMap<>();
+
+        for (Familia familia : familias) {
+            Avaliacao avaliacao = AvaliacaoVulnerabilidadeService.avaliar(familia, base, hoje);
+            EstratoRisco estrato = avaliacao.estrato();
+            Comunidade comunidade = familia.getComunidade();
+            Municipio municipio = comunidade.getMunicipio();
+
+            total.merge(estrato, 1L, Long::sum);
+            municipios.putIfAbsent(municipio.getId(), municipio);
+            porMunicipio.computeIfAbsent(municipio.getId(), k -> new EnumMap<>(EstratoRisco.class))
+                    .merge(estrato, 1L, Long::sum);
+            comunidades.putIfAbsent(comunidade.getId(), comunidade);
+            porComunidade.computeIfAbsent(comunidade.getId(), k -> new EnumMap<>(EstratoRisco.class))
+                    .merge(estrato, 1L, Long::sum);
+            if (estrato == EstratoRisco.DADOS_INSUFICIENTES) {
+                avaliacao.camposFaltantes().forEach(campo -> faltas.merge(campo, 1L, Long::sum));
+            }
+        }
+
+        List<PorMunicipio> linhasMunicipio = municipios.values().stream()
+                .sorted(Comparator.comparing(Municipio::getNome))
+                .map(m -> {
+                    Map<EstratoRisco, Long> contagem = porMunicipio.get(m.getId());
+                    long soma = somar(contagem);
+                    return new PorMunicipio(m.getId(), m.getNome(), soma, distribuir(base, contagem, soma));
+                })
+                .toList();
+
+        // a consulta já vem ordenada por nome da comunidade
+        List<PorComunidade> linhasComunidade = comunidades.values().stream()
+                .map(c -> {
+                    Map<EstratoRisco, Long> contagem = porComunidade.get(c.getId());
+                    long soma = somar(contagem);
+                    return new PorComunidade(c.getId(), c.getNome(), c.getMunicipio().getNome(), soma,
+                            distribuir(base, contagem, soma));
+                })
+                .toList();
+
+        List<CampoFaltante> camposFaltantes = faltas.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
+                .map(e -> new CampoFaltante(e.getKey(), e.getValue()))
+                .toList();
+
+        List<SentinelaNaoAvaliada> naoAvaliadas = base.naoAvaliadas().stream()
+                .map(s -> new SentinelaNaoAvaliada(s.codigo(), s.nome(), s.pontos(), s.situacao(), s.justificativa()))
+                .toList();
+
+        return new VulnerabilidadeResponse(
+                familias.size(),
+                base.escoreMaximoAlcancavel(),
+                distribuir(base, total, familias.size()),
+                linhasMunicipio,
+                linhasComunidade,
+                camposFaltantes,
+                naoAvaliadas);
+    }
+
+    private static long somar(Map<EstratoRisco, Long> contagem) {
+        return contagem.values().stream().mapToLong(Long::longValue).sum();
+    }
+
+    private static List<ContagemEstrato> distribuir(BaseDeConhecimento base, Map<EstratoRisco, Long> contagem, long total) {
+        return base.estratos().stream()
+                .map((CorteEstrato c) -> ContagemEstrato.de(c.estrato(), c.rotulo(),
+                        contagem.getOrDefault(c.estrato(), 0L), total))
+                .toList();
     }
 }

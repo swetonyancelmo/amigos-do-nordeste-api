@@ -24,4 +24,5 @@ public sealed interface CamposFamilia permits CriarFamiliaRequisicao, AtualizarF
     Set<AbastecimentoAgua> abastecimentoAgua();
     FaixaRenda faixaRenda();
     String observacoes();
+    Integer numeroComodos();
 }

@@ -25,14 +25,19 @@ O domínio está completo para o que o web e o app consomem. Cada pacote em
 | `pessoa` | `/api/pessoas`, `/api/pessoas/{id}/mover`, `/api/familias/{id}/pessoas` | lista com filtros, ficha, inclui, edita, **muda de família**, remove |
 | `fonterenda` | — (dentro de família) | entidade e enums de renda |
 | `metadados` | `/api/metadados` (público) | todas as listas fechadas com rótulo |
-| `relatorio` | `/api/relatorios/{necessidades,necessidades.xlsx,situacao,mapa}` | roupa/calçado por tamanho (JSON e planilha Excel com abas Necessidades, Famílias e Pessoas); indicadores de situação; mapa com um ponto por comunidade |
+| `relatorio` | `/api/relatorios/{necessidades,necessidades.xlsx,situacao,mapa,vulnerabilidade}` | roupa/calçado por tamanho (JSON e planilha Excel com abas Necessidades, Famílias e Pessoas); indicadores de situação; mapa com um ponto por comunidade; famílias por estrato de vulnerabilidade |
+| `vulnerabilidade` | `/api/vulnerabilidade/base` (+ dentro de família, relatório e metadados) | sistema especialista da Escala de Coelho-Savassi (ADR-0010): base de conhecimento no banco (`base/`), motor puro (`motor/`), `AvaliacaoVulnerabilidadeService` |
 | `agente` | `/api/agentes`, `/api/agentes/{id}/novo-convite`, `/api/agentes/ativar` (público, com limite por IP) | painel cadastra a agente e gera o convite; o aparelho troca o código pelo token |
 | `precadastro` | `/api/pre-cadastros`, `/api/pre-cadastros/situacao` | agente envia (idempotente; devolvido reenviado volta à fila) e consulta a situação; admin lista, detalha, aprova (vira família) ou devolve |
 | `comum` | `/api/saude` (público) | erros (`ManipuladorDeErros`), `PaginaResposta`, `LimitadorPorIp`, `BuscaPorNome` |
 | `config` | — | `SegurancaConfig` (rotas e papéis), `OpenApiConfig`, `ConversorUrlBanco` (string do Neon → JDBC) |
 | `dominio` | — | `Idade` (cálculo com idade estimada datada), `Cpf`, `NumerosCalcado`, `Rotulavel` |
 
-Migrações Flyway: V1 a V14 (a próxima é `V15__…`). Duas mudanças de modelo
+Migrações Flyway: V1 a V18 (a próxima é `V19__…`). V18 reescreve as justificativas das sentinelas para a tela (também é semente do H2). V15/V16 são a base de
+conhecimento da avaliação de vulnerabilidade (estrutura e conteúdo); a V16
+também é a semente do H2 nos testes (`spring.sql.init` em
+`application-test.yml`), então mantenha-a só com `INSERT` portável. V17 é
+`familia.numero_comodos`. Duas mudanças de modelo
 que o código antigo e as ADRs podem não refletir: a **faixa de renda é da
 família** (`familia.faixa_renda`, V14; a fonte de renda guarda só tipo e dono) e
 `familia.ativa` (V12) controla a inativação.
@@ -41,7 +46,7 @@ Sem rota para: perfil (`/api/usuario`), exclusão de família, município ou
 comunidade, desativar ou renomear agente. `Papel` só tem `ADMIN`; a agente não é
 usuário, é um aparelho com token (`ROLE_AGENTE`, tabela `agente`).
 
-`mvn verify` passa com 191 testes (conferido em 08/10/2026). O CI
+`mvn verify` passa com 238 testes (conferido em 10/10/2026). O CI
 (`.github/workflows/ci.yml`) roda o mesmo com um Postgres de serviço.
 
 Ao ajudar aqui, **não construa módulos inteiros por iniciativa própria.** O
@@ -93,6 +98,11 @@ time trabalha por issues no Kanban. Faça a tarefa pedida, no tamanho pedido.
     `POST /api/agentes/ativar` é público e limitado a 5 tentativas por minuto
     por IP (`LimitadorPorIp`); atrás de proxy, ligue
     `SERVER_FORWARD_HEADERS_STRATEGY=native` ou o limite vira global.
+15. **Avaliação de vulnerabilidade (ADR-0010)**: peso, faixa, corte e rótulo
+    moram nas tabelas `vulnerabilidade_*`, nunca em código; não reescale os
+    cortes 5/7/9. É sugestão: nada age sozinho a partir do escore, e ele não
+    é gravado nem vai para exportação com nome. Dado faltando é
+    `INDETERMINADA`, nunca "ausente". Não crie campo de dado de saúde.
 
 ## Testes
 
