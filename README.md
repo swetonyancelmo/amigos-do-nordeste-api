@@ -85,9 +85,9 @@ de cada corpo e resposta está no Swagger.
 | `GET/POST /api/municipios`, `GET/PUT /api/municipios/{id}` | Municípios atendidos (`codigo_ibge` único). |
 | `GET/POST /api/comunidades`, `GET/PUT /api/comunidades/{id}` | Comunidades, com filtro por município e latitude/longitude para o mapa. |
 | `GET /api/comunidades/opcoes` | **Agente.** Só id, nome e município, para o app escolher offline. |
-| `GET /api/familias` | Lista paginada. Filtros: `busca`, `municipioId`, `comunidadeId`, `semBanheiro`, `incluirInativas`, `pagina`, `porPagina` (25, máx. 100). |
-| `GET /api/familias/{id}` | Ficha completa: comunidade, município, membros, fontes de renda e totais calculados. |
-| `POST /api/familias`, `PUT /api/familias/{id}` | Família com pessoas e fontes de renda numa chamada só (o `PUT` faz merge). |
+| `GET /api/familias` | Lista paginada, com o estrato de vulnerabilidade de cada linha. Filtros: `busca`, `municipioId`, `comunidadeId`, `semBanheiro`, `incluirInativas`, `estrato` (repetível), `ordenacao` (`NOME` ou `PRIORIDADE`), `pagina`, `porPagina` (25, máx. 100). |
+| `GET /api/familias/{id}` | Ficha completa: comunidade, município, membros, fontes de renda, totais calculados e a sugestão de prioridade com a explicação (ADR-0010). |
+| `POST /api/familias`, `PUT /api/familias/{id}` | Família com pessoas e fontes de renda numa chamada só (o `PUT` faz merge). Aceita `numeroComodos`. |
 | `POST /api/familias/{id}/inativar` · `/reativar` | Família não se apaga: inativa some de listagem, contagem e relatório. |
 | `GET /api/pessoas`, `GET /api/pessoas/{id}` | Lista com filtros (`nome`, `comunidadeId`, `municipioId`, `familiaId`, `cadastroIncompleto`, `estuda`, `faixaEtaria`, `pagina`, `tamanho`; 20 por página, máx. 100) e ficha. |
 | `POST /api/familias/{familiaId}/pessoas`, `PUT/DELETE /api/pessoas/{id}` | Inclui, edita e remove pessoa de uma família. |
@@ -114,7 +114,19 @@ têm criar, listar, buscar e editar.
 | `GET /api/relatorios/necessidades` | Roupa e calçado por tamanho (`comunidadeId`, `municipioId`, `todasIdades`; padrão: só até 12 anos). |
 | `GET /api/relatorios/necessidades.xlsx` | O mesmo relatório em Excel, com abas de Necessidades, Famílias e Pessoas (backup, RF-05). Mesmos filtros. |
 | `GET /api/relatorios/situacao` | Indicadores de situação das famílias (sem banheiro, só carro-pipa, só Bolsa Família, sem tratamento de água), em valor e percentual (`comunidadeId`, `municipioId`). |
+| `GET /api/relatorios/vulnerabilidade` | Famílias por estrato da avaliação de vulnerabilidade (Coelho-Savassi adaptada, ADR-0010), no total, por município e por comunidade, incluindo `DADOS_INSUFICIENTES` e o que falta preencher. Só contagens (`comunidadeId`, `municipioId`). |
+| `GET /api/vulnerabilidade/base` | As regras em uso na avaliação (sentinelas e pontos, faixas, estratos com a faixa de escore, o que fica de fora), para a tela mostrar de onde vem a prioridade sugerida. |
 | `GET /api/relatorios/mapa` | Um ponto por comunidade, com latitude, longitude e contagem de famílias ativas (`municipioId` opcional). Nunca um ponto por família (ADR-0005). |
+
+### Avaliação de vulnerabilidade
+
+Sistema especialista com a **Escala de Risco Familiar de Coelho-Savassi**:
+pesos, faixas, cortes e rótulos ficam no banco (V15/V16), o motor
+(`vulnerabilidade/motor/`) só os aplica e a resposta explica cada ponto. É
+**sugestão, nunca decisão**, calculada a cada leitura. Família sem dado
+suficiente sai `DADOS_INSUFICIENTES`, nunca "sem risco". O que entrou, o que
+foi descartado (as sentinelas de saúde, por LGPD) e por quê está na
+[ADR-0010](docs/decisoes/ADR-0010-classificador-vulnerabilidade.md).
 
 ### Ainda não existe
 

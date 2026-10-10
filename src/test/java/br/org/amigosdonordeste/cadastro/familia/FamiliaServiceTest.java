@@ -93,7 +93,7 @@ class FamiliaServiceTest {
                 comunidadeExistente.getId(), "Maria Rizeuda da Silva", null, null,
                 "Perto da igreja", true, EscoamentoSanitario.FOSSA_RUDIMENTAR,
                 TratamentoAgua.SEM_TRATAMENTO, Set.of(AbastecimentoAgua.CISTERNA), FaixaRenda.ATE_1_SALARIO,
-                List.of(pessoa), List.of(fonte), null);
+                List.of(pessoa), List.of(fonte), null, null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
         when(familiaRepositorio.save(any(Familia.class))).thenAnswer(chamada -> chamada.getArgument(0));
@@ -125,7 +125,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Josefa", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(josefa, antonio), List.of(bolsaDaFamilia, aposentadoriaDoAntonio), null);
+                Set.of(), null, List.of(josefa, antonio), List.of(bolsaDaFamilia, aposentadoriaDoAntonio), null, null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
         when(familiaRepositorio.save(any(Familia.class))).thenAnswer(chamada -> {
@@ -152,7 +152,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(), List.of(fonte), null);
+                Set.of(), null, List.of(), List.of(fonte), null, null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
 
@@ -167,7 +167,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeInexistente, "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(), List.of(), null);
+                Set.of(), null, List.of(), List.of(), null, null);
 
         when(comunidadeRepositorio.findById(comunidadeInexistente)).thenReturn(Optional.empty());
 
@@ -184,7 +184,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(pessoa), List.of(), null);
+                Set.of(), null, List.of(pessoa), List.of(), null, null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
 
@@ -201,7 +201,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(pessoa), List.of(), null);
+                Set.of(), null, List.of(pessoa), List.of(), null, null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
 
@@ -217,7 +217,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(pessoaSemNadaQuaseNada), List.of(), null);
+                Set.of(), null, List.of(pessoaSemNadaQuaseNada), List.of(), null, null);
 
         when(comunidadeRepositorio.findById(comunidadeExistente.getId())).thenReturn(Optional.of(comunidadeExistente));
         when(familiaRepositorio.save(any(Familia.class))).thenAnswer(chamada -> chamada.getArgument(0));
@@ -238,7 +238,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao requestQualquer = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(), List.of(), null);
+                Set.of(), null, List.of(), List.of(), null, null);
 
         assertThrows(FamiliaNaoEncontradaException.class,
                 () -> familiaService.atualizar(idInexistente, requestQualquer));
@@ -273,7 +273,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(anaComNomeAtualizado, brunoIntacto), List.of(), null);
+                Set.of(), null, List.of(anaComNomeAtualizado, brunoIntacto), List.of(), null, null);
 
         FamiliaResponse resposta = familiaService.atualizar(familiaExistente.getId(), request);
 
@@ -310,7 +310,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(brunoIntacto), List.of(), null);
+                Set.of(), null, List.of(brunoIntacto), List.of(), null, null);
 
         FamiliaResponse resposta = familiaService.atualizar(familiaExistente.getId(), request);
 
@@ -347,7 +347,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(), List.of(fonteSemPessoa), null);
+                Set.of(), null, List.of(), List.of(fonteSemPessoa), null, null);
 
         FamiliaResponse resposta = familiaService.atualizar(familiaExistente.getId(), request);
 
@@ -368,7 +368,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(primeira, segunda), List.of(), null);
+                Set.of(), null, List.of(primeira, segunda), List.of(), null, null);
 
         assertThrows(IdDuplicadoNoPayloadException.class,
                 () -> familiaService.atualizar(UUID.randomUUID(), request));
@@ -391,7 +391,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(), List.of(fonteDePessoaAlheia), null);
+                Set.of(), null, List.of(), List.of(fonteDePessoaAlheia), null, null);
 
         assertThrows(PessoaReferenciadaInvalidaException.class,
                 () -> familiaService.atualizar(familiaExistente.getId(), request));
@@ -407,7 +407,7 @@ class FamiliaServiceTest {
         CriarFamiliaRequisicao request = new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", "123.456.789-09", null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(), List.of(), null);
+                Set.of(), null, List.of(), List.of(), null, null);
 
         FamiliaResponse resposta = familiaService.criar(request);
 
@@ -418,7 +418,7 @@ class FamiliaServiceTest {
         return new CriarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", cpf, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(), List.of(), null);
+                Set.of(), null, List.of(), List.of(), null, null);
     }
 
     @Test
@@ -472,7 +472,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", "123.456.789-09", null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(), List.of(), null);
+                Set.of(), null, List.of(), List.of(), null, null);
 
         assertEquals("12345678909", familiaService.atualizar(familiaExistente.getId(), request).responsavelCpf());
     }
@@ -494,7 +494,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Nome Novo", "12345678909", null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(), List.of(), null);
+                Set.of(), null, List.of(), List.of(), null, null);
 
         assertThrows(CpfJaCadastradoException.class,
                 () -> familiaService.atualizar(familiaExistente.getId(), request));
@@ -527,7 +527,7 @@ class FamiliaServiceTest {
         AtualizarFamiliaRequisicao request = new AtualizarFamiliaRequisicao(
                 comunidadeExistente.getId(), "Maria", null, null, null, true,
                 EscoamentoSanitario.FOSSA_RUDIMENTAR, TratamentoAgua.SEM_TRATAMENTO,
-                Set.of(), null, List.of(mesmaIdadeSemData), List.of(), null);
+                Set.of(), null, List.of(mesmaIdadeSemData), List.of(), null, null);
 
         familiaService.atualizar(familiaExistente.getId(), request);
 

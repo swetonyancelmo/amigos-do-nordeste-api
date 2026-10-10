@@ -6,6 +6,7 @@ import br.org.amigosdonordeste.cadastro.familia.enums.EscoamentoSanitario;
 import br.org.amigosdonordeste.cadastro.familia.enums.TratamentoAgua;
 import br.org.amigosdonordeste.cadastro.fonterenda.enums.FaixaRenda;
 import br.org.amigosdonordeste.cadastro.pessoa.enums.FaixaEtaria;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.Avaliacao;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
@@ -20,6 +21,10 @@ import java.util.UUID;
  * comunidadeId: aqui a comunidade vem aninhada com o município, porque a tela
  * mostra "Sítio Alegre — Ibimi/PE" no cabeçalho e não deve precisar de uma
  * segunda chamada só para isso.
+ *
+ * vulnerabilidade é a sugestão de prioridade com a explicação inteira
+ * (ADR-0010), calculada na hora. Fica null só na exportação em Excel, que
+ * não leva escore junto com nome de família.
  */
 public record FamiliaDetalheResponse(
         UUID id,
@@ -36,10 +41,12 @@ public record FamiliaDetalheResponse(
         List<PessoaResponse> pessoas,
         List<FonteRendaResponse> fontesRenda,
         String observacoes,
+        Integer numeroComodos,
         boolean ativa,
         OffsetDateTime criadoEm,
         OffsetDateTime atualizadoEm,
-        Totais totais
+        Totais totais,
+        Avaliacao vulnerabilidade
 ) {
 
     /**
@@ -59,7 +66,12 @@ public record FamiliaDetalheResponse(
     ) {
     }
 
+    /** Sem avaliação: só para a exportação em Excel (RelatorioService). */
     public static FamiliaDetalheResponse fromEntity(Familia familia) {
+        return fromEntity(familia, null);
+    }
+
+    public static FamiliaDetalheResponse fromEntity(Familia familia, Avaliacao vulnerabilidade) {
         List<PessoaResponse> pessoas = familia.getPessoas().stream()
                 .map(PessoaResponse::fromEntity)
                 .toList();
@@ -90,10 +102,12 @@ public record FamiliaDetalheResponse(
                 pessoas,
                 fontes,
                 familia.getObservacoes(),
+                familia.getNumeroComodos(),
                 familia.isAtiva(),
                 familia.getCriadoEm(),
                 familia.getAtualizadoEm(),
-                contar(pessoas, fontes)
+                contar(pessoas, fontes),
+                vulnerabilidade
         );
     }
 

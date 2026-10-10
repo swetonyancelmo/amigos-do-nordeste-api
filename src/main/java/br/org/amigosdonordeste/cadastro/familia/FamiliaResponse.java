@@ -24,6 +24,7 @@ public record FamiliaResponse(
         List<PessoaResponse> pessoas,
         List<FonteRendaResponse> fontesRenda,
         String observacoes,
+        Integer numeroComodos,
         boolean ativa,
         Totais totais
 ) {
@@ -57,6 +58,7 @@ public record FamiliaResponse(
                 pessoas,
                 fontes,
                 familia.getObservacoes(),
+                familia.getNumeroComodos(),
                 familia.isAtiva(),
                 new Totais(pessoas.size(), (int) estudando, fontes.size())
         );

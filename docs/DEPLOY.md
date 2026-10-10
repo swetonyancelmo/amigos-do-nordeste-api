@@ -229,7 +229,7 @@ todas as dependências do projeto. Acompanhe em **Logs**, no serviço.
    A linha `Successfully applied 14 migrations` é a prova de que o Flyway criou
    as tabelas no Neon. **Só aparece no primeiro deploy.** Nos seguintes, a linha
    é `Schema "public" is up to date. No migration necessary.`, que também está
-   certa. Se uma migração nova entrar no futuro (V15…), aparece
+   certa. Se uma migração nova entrar no futuro (V19…), aparece
    `Successfully applied 1 migration`.
 
 Nenhuma senha aparece nessas linhas: a API registra o host do banco, nunca a

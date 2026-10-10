@@ -239,7 +239,7 @@ class FamiliaListagemTest {
     }
 
     @Test
-    @DisplayName("uma página de 25 famílias com membros não passa de 3 consultas")
+    @DisplayName("uma página de 25 famílias com membros faz um número fixo de consultas (sem N+1)")
     void semNMaisUm() throws Exception {
         for (int i = 0; i < 30; i++) {
             salvar(String.format("Responsável %02d", i), i % 2 == 0 ? comunidadeA : comunidadeB, true, 5, 40, 70);
@@ -254,10 +254,14 @@ class FamiliaListagemTest {
                 .andExpect(jsonPath("$.itens", hasSize(25)))
                 .andExpect(jsonPath("$.itens[0].totalPessoas").value(3));
 
-            // a autenticação por JWT não consulta o banco; tudo aqui é da listagem
+            // a autenticação por JWT não consulta o banco; tudo aqui é da listagem.
+            // Até 3 da página (página, count, pessoas) + 2 da avaliação de
+            // vulnerabilidade (fontes e abastecimento, em lote pelo @BatchSize)
+            // + 2 da base de conhecimento (sentinelas e estratos). Nenhuma
+            // cresce com o tamanho da página (ADR-0010).
             long consultas = estatisticas.getPrepareStatementCount();
             // > 0 garante que a estatística está mesmo contando
-            assertTrue(consultas > 0 && consultas <= 3, "esperava de 1 a 3 consultas, foram " + consultas);
+            assertTrue(consultas > 0 && consultas <= 7, "esperava de 1 a 7 consultas, foram " + consultas);
         } finally {
             estatisticas.setStatisticsEnabled(false);
         }

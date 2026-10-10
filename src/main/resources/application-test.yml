@@ -9,7 +9,18 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+  # Base de conhecimento da avaliação de vulnerabilidade (ADR-0010): sem
+  # Flyway, o H2 recebe o conteúdo pela própria V16, depois que o Hibernate
+  # cria as tabelas. Uma fonte só: o teste usa o mesmo dado da produção.
+  sql:
+    init:
+      mode: always
+      data-locations:
+        - classpath:db/migration/V16__escala_coelho_savassi.sql
+        - classpath:db/migration/V18__vulnerabilidade_criterios_para_leitura.sql
+      encoding: UTF-8
   jpa:
+    defer-datasource-initialization: true
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop

@@ -124,6 +124,7 @@ Rastreabilidade: cada linha aponta para a origem e para a tela do Figma.
 | RF-09 | Marcar cadastro como incompleto e voltar depois | Análise da lista manuscrita | 03 | Modelado |
 | RF-10 | Cadastro de voluntários com disponibilidade | Formulário 31/08 | — | **Proposto, ver Q-04** |
 | RF-11 | Anexar fotos a família, comunidade ou campanha | Formulário 31/08 | — | **Proposto, ver ADR-0008** |
+| RF-12 | Sugerir prioridade de atendimento com explicação (Escala de Coelho-Savassi) | Decisão hoje feita de memória | — | Implementado na API ([ADR-0010](decisoes/ADR-0010-classificador-vulnerabilidade.md)); falta a tela e o campo de cômodos no web |
 
 ### Não funcionais
 

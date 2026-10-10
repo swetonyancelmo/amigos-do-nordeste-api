@@ -71,6 +71,17 @@ public class RelatorioController {
         return relatorioService.situacao(comunidadeId, municipioId);
     }
 
+    @Operation(summary = "Famílias por estrato da avaliação de vulnerabilidade, no total, por município e por "
+            + "comunidade, com DADOS_INSUFICIENTES e o que falta preencher (ADR-0010). Só contagens")
+    @GetMapping("/vulnerabilidade")
+    public VulnerabilidadeResponse vulnerabilidade(
+            @Parameter(description = "Filtra por comunidade; omitido, soma todas as comunidades")
+            @RequestParam(required = false) UUID comunidadeId,
+            @Parameter(description = "Filtra por município; combina com comunidadeId se os dois vierem")
+            @RequestParam(required = false) UUID municipioId) {
+        return relatorioService.vulnerabilidade(comunidadeId, municipioId);
+    }
+
     @Operation(summary = "Mapa: famílias agrupadas por comunidade, um ponto por comunidade (ADR-0005)")
     @GetMapping("/mapa")
     public PontosPorComunidadeResponse mapa(

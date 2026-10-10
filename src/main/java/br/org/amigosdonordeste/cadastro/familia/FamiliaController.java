@@ -15,12 +15,15 @@ import org.springframework.web.bind.annotation.RestController;
 import br.org.amigosdonordeste.cadastro.comum.dto.ErroResposta;
 import br.org.amigosdonordeste.cadastro.comum.dto.PaginaResposta;
 import br.org.amigosdonordeste.cadastro.familia.dto.FamiliaFiltroDTO;
+import br.org.amigosdonordeste.cadastro.familia.dto.OrdenacaoFamilia;
 import br.org.amigosdonordeste.cadastro.familia.request.AtualizarFamiliaRequisicao;
 import br.org.amigosdonordeste.cadastro.familia.request.CriarFamiliaRequisicao;
+import br.org.amigosdonordeste.cadastro.vulnerabilidade.motor.EstratoRisco;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -52,14 +55,22 @@ public class FamiliaController {
         @Parameter(name = "pagina", in = ParameterIn.QUERY, schema = @Schema(type = "integer", defaultValue = "0"),
             description = "Começa em 0"),
         @Parameter(name = "porPagina", in = ParameterIn.QUERY, schema = @Schema(type = "integer", defaultValue = "25"),
-            description = "Padrão 25, teto 100")
+            description = "Padrão 25, teto 100"),
+        @Parameter(name = "estrato", in = ParameterIn.QUERY,
+            array = @ArraySchema(schema = @Schema(implementation = EstratoRisco.class)),
+            description = "Só famílias destes estratos da avaliação de vulnerabilidade (ADR-0010); pode repetir. "
+                + "DADOS_INSUFICIENTES lista quem precisa ter o cadastro completado"),
+        @Parameter(name = "ordenacao", in = ParameterIn.QUERY, schema = @Schema(implementation = OrdenacaoFamilia.class),
+            description = "NOME (padrão) ou PRIORIDADE: ordem dos estratos e, dentro deles, pontos confirmados. "
+                + "É sugestão de leitura, não fila de atendimento")
     })
     @GetMapping
     public PaginaResposta<FamiliaResumoResponse> listar(@Parameter(hidden = true) FamiliaFiltroDTO filtro) {
         return familiaService.listar(filtro);
     }
 
-    @Operation(summary = "Ficha completa da família: comunidade, município, membros, fontes de renda e totais")
+    @Operation(summary = "Ficha completa da família: comunidade, município, membros, fontes de renda, totais "
+        + "e a sugestão de prioridade com a explicação (ADR-0010)")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Família encontrada"),
         @ApiResponse(responseCode = "404", description = "Não existe família com esse id",

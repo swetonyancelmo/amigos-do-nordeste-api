@@ -27,8 +27,10 @@ public final class Idade {
     /**
      * Versão usada pelos testes, que passam a data de "hoje" na mão.
      * É isso que faz o teste dar o mesmo resultado hoje, amanhã e no ano que vem.
+     * Pública para o classificador de vulnerabilidade (ADR-0010), que avalia
+     * a família inteira contra um único "hoje".
      */
-    static Integer calcular(LocalDate dataNascimento,
+    public static Integer calcular(LocalDate dataNascimento,
                             Integer idadeEstimada,
                             LocalDate idadeEstimadaEm,
                             LocalDate hoje) {

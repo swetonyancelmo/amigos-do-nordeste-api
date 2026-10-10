@@ -362,7 +362,10 @@ public class PreCadastroService {
             complemento.faixaRenda(),
             pessoas,
             complemento.fontesRenda() == null ? List.of() : complemento.fontesRenda(),
-            complemento.observacoes());
+            complemento.observacoes(),
+            // nem o app nem o corpo de /aprovar perguntam cômodos (ADR-0010):
+            // completa-se depois, no PUT /api/familias/{id}
+            null);
 
         FamiliaResponse familia = familiaService.criar(requisicao);
 
