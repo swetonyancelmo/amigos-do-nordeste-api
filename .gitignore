@@ -21,3 +21,11 @@ bin/
 .DS_Store
 *.log
 /postgres-data/
+
+# importação dos cadastros em Word: planilhas, controle e relatórios com dado real
+/ferramentas/importacao-word/trabalho/
+/ferramentas/importacao-word/**/*.docx
+/ferramentas/importacao-word/**/*.xlsx
+/ferramentas/importacao-word/**/*.json
+/ferramentas/importacao-word/**/__pycache__/
+/ferramentas/importacao-word/.venv/
